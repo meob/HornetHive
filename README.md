@@ -109,6 +109,13 @@ It is highly recommended to use a virtual environment to manage dependencies:
 npm install
 ```
 
+### 4. 🧠 AI Models (Mandatory)
+Large binary files are excluded from this repository. You must download them manually and place them in the project root:
+
+- **YOLOv8n (Object Detection)**: [Download yolov8n.pt](https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.pt)
+- **MediaPipe Hand Landmarker (Gesture Auth)**: [Download hand_landmarker.task](https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task)
+
+
 ---
 
 ## 📂 Project Structure
