@@ -1,0 +1,30 @@
+# Hornet Hive - .gitignore
+
+# 📦 Dependency Directories
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 📁 Storage & Logs
+logs/
+*.log
+hive_mission.log
+hive_ai_debug.log
+hive_mission.log.old
+
+# 🧠 AI Models (Ignore large binary files, usually hosted elsewhere or manually downloaded)
+*.pt
+*.task
+
+# 📂 Temporary/Old Files
+old/
+temp/
+.DS_Store
+Thumbs.db
+
+# 🛡️ Credentials & Environment
+.env
+.env.*
+secrets.json

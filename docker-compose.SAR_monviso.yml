@@ -1,0 +1,27 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    ports: ["1883:1883", "9001:9001"]
+    volumes: ["./mosquitto.conf:/mosquitto/config/mosquitto.conf"]
+
+  gcs-backend:
+    build: { context: ., dockerfile: Dockerfile.node }
+    ports: ["3000:3000"]
+    command: ["node", "server.js", "--scenario", "MONVISO_ALPINE", "--log"]
+    environment: ["MQTT_HOST=mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  drone-scout:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "FALCO", "FALCO_EVO", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  drone-rescue:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "RESCUE_AIR", "MATRICE_350_RTK", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  target-hiker:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "HIKER", "--type", "⛑️", "--action", "MEDKIT", "--offset", "-800,1200", "--area", "1000", "--max-alt", "20", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]

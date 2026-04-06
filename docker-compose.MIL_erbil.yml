@@ -1,0 +1,53 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    ports: ["1883:1883", "9001:9001"]
+    volumes: ["./mosquitto.conf:/mosquitto/config/mosquitto.conf"]
+
+  gcs-backend:
+    build: { context: ., dockerfile: Dockerfile.node }
+    ports: ["3000:3000"]
+    command: ["node", "server.js", "--scenario", "ERBIL_BASE", "--log"]
+    environment: ["MQTT_HOST=mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  drone-istar:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "TB2", "BAYRAKTAR_TB2", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  drone-strike:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "REAPER", "MQ_9_REAPER", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  drone-kamikaze:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "BLADE_01", "SWITCHBLADE_300", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  target-convoy:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "CONVOY", "--type","🛻", "--action","STRIKE", "--offset","1500,1500", "--area","1000", "--delay","60", "--drift", "2.0", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  target-jammer:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "JAMMER", "--type","📡", "--action","STRIKE", "--pos", "1200,800", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  target-missile1:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "SAM_1", "--type","🚀", "--action","STRIKE", "--offset","2000,0", "--area","500", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  target-missile2:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "SAM_2", "--type","🚀", "--action","STRIKE", "--offset","2000,0", "--area","500", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  weather-station:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: ["PYTHONUNBUFFERED=1"]
+    command: ["python", "assets/meteo_mock.py", "--lat", "36.232372", "--lon", "43.969404", "--mqtt-host", "mqtt-broker", "--interval", "600"]
+    depends_on: ["mqtt-broker"]

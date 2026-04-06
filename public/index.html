@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HORNET HIVE | C4I TERMINAL</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="tactical_audio.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    :root { 
+        --neon: #00ff41; --alert: #ff3131; --warn: #ffcc00; --bg: #050505; --auth: #ff00ff; 
+        --hex-width: 180px;
+        --hex-height: 210px;
+    }
+    
+    body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+    
+    #sidebar { width: 320px; border-right: 1px solid #333; display: flex; flex-direction: column; background: #0a0a0c; }
+    #main { flex: 1; display: flex; flex-direction: column; }
+
+    .grid { 
+        display: block;
+        padding: 40px 20px; 
+        background: #000; height: 360px; overflow-y: auto; border-bottom: 1px solid #333;
+        text-align: center;
+        font-size: 0;
+    }
+
+    .hex { 
+        width: var(--hex-width); 
+        height: var(--hex-height); 
+        background: #000; 
+        border: 2px solid var(--neon);
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        position: relative; 
+        display: inline-block;
+        margin-right: 4px;
+        margin-bottom: -50px;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        vertical-align: top;
+    }
+
+    .grid::before {
+        content: "";
+        width: calc(var(--hex-width) / 2 + 2px);
+        float: left;
+        height: 100%;
+        shape-outside: repeating-linear-gradient(#0000 0 155px, #000 0 310px);
+    }
+
+    .hex img { 
+        width: 160%; height: 160%; position: absolute; 
+        top: -30%; left: -30%; object-fit: cover; opacity: 0.6; z-index: 1;
+    }
+
+    .hex-osd { 
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+        display: flex; flex-direction: column; justify-content: space-between;
+        align-items: center; text-align: center;
+        z-index: 5; pointer-events: none;
+        padding: 35px 0; box-sizing: border-box;
+        text-shadow: 2px 2px 4px #000;
+    }
+
+    .hex-osd .id-tag { font-weight: bold; font-size: 14px; margin-top: 5px; }
+    .hex-osd .status-content { font-size: 10px; margin-bottom: 5px; display: flex; flex-direction: column; }
+
+    .hex.alerting { border: 2px solid var(--alert) !important; animation: blink 0.5s infinite alternate; }
+    .hex.authorized { border: 3px solid var(--auth) !important; box-shadow: 0 0 20px var(--auth); }
+    .hex.offline, .hex.disconnected { border: 2px solid #ff3131 !important; filter: grayscale(100%); opacity: 0.5; }
+    .hex.offline .hex-osd, .hex.disconnected .hex-osd { color: #ff3131 !important; font-weight: bold; }
+
+    @keyframes blink { from { opacity: 1; } to { opacity: 0.4; } }
+    
+    #map { flex: 1; filter: invert(100%) hue-rotate(180deg) brightness(0.7); }
+    .mission-ctrl { padding: 15px; background: #111; border-top: 1px solid #444; }
+    #log { flex: 1; overflow-y: auto; font-size: 10px; padding: 10px; color: #888; font-family: monospace; }
+    .log-entry { margin-bottom: 4px; border-bottom: 1px solid #222; padding-bottom: 2px; }
+    
+    button { background: none; border: 1px solid var(--neon); color: var(--neon); padding: 8px; cursor: pointer; width: 100%; margin-top: 5px; }
+    button:hover { background: var(--neon); color: #000; }
+    button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+    select, input { background: #000; color: var(--neon); border: 1px solid var(--neon); padding: 5px; width: 100%; box-sizing: border-box; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div style="padding:10px; background:var(--neon); color:#000; font-weight:bold; text-align:center;">TACTICAL LOG</div>
+    <div id="log"></div>
+    <div class="mission-ctrl">
+        <select id="drone-sel" onchange="updateActionBtn()">
+            <option value="ALL">ALL ASSETS (SWARM)</option>
+        </select>
+        <div style="margin: 10px 0; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 5px;">
+            <div style="flex-shrink: 0; min-width: 65px;">ALT: <span id="alt-val" style="color:var(--warn)">30</span>m</div>
+            <input type="range" id="alt-slider" min="0" max="100" value="11" oninput="updateAltLabel(this.value)" style="flex-grow: 1; cursor: pointer;">
+        </div>
+        <button id="btn-confirm" onclick="dispatchCommand('TRANSIT')" disabled>MOVE TO TARGET</button>
+        <div style="display: flex; gap: 5px;">
+            <button id="btn-strike" onclick="triggerAction()" style="border-color: var(--alert); color: var(--alert);" disabled>ACTION</button>
+            <button id="btn-rtl" onclick="dispatchCommand('RTL')" style="border-color: var(--warn); color: var(--warn);">RTL (HOME)</button>
+        </div>
+    </div>
+
+    <div style="padding: 15px; border-top: 1px solid #444; background: #0a0a0c;">
+        <div style="color:var(--auth); font-size: 11px; margin-bottom: 5px; font-weight: bold; border-bottom: 1px solid var(--auth);">AI COMMANDER (LLM)</div>
+        <textarea id="ai-input" placeholder="Enter tactical objective..." 
+                  style="background:#000; color:var(--auth); border:1px solid var(--auth); width:100%; height: 60px; font-size: 11px; padding: 5px; box-sizing: border-box; resize: none;"></textarea>
+        <button onclick="sendAICommand()" style="border-color: var(--auth); color: var(--auth); margin-top: 5px;">EXECUTE STRATEGY</button>
+        <div id="ai-status" style="font-size: 9px; color: var(--auth); margin-top: 5px; opacity: 0.7;">AI: READY</div>
+    </div>
+</div>
+
+<div id="main">
+    <div class="grid" id="asset-grid"></div>
+    <div id="map"></div>
+</div>
+
+<script>
+    const socket = io();
+    const markers = {};
+    const assetCapabilities = {};
+    const searchAreas = {};
+    const announcedTargets = new Set();
+    const maydayStartTimes = {};
+    const radarPings = {}; // sensorId: { blipId: { pinged: boolean } }
+    
+    let HOME_COORDS = [44.960409, 7.578401]; 
+    let selectedCoords = null;
+    let tempMarker = null;
+    let pendingStrike = null;
+    let wraTimer = null;
+
+    const CAP_ICONS = { "SENSOR": "📷", "RESCUE_TUBE": "🛟", "MEDKIT": "⛑️", "STRIKE": "🔥" };
+    const ACTION_LABELS = { "SENSOR": "SCAN / PHOTO", "RESCUE_TUBE": "DROP LIFE RAFT", "MEDKIT": "DROP MEDKIT", "STRIKE": "ENGAGE TARGET" };
+
+    function addLog(msg, color="#888") {
+        const log = document.getElementById('log');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.style.color = color;
+        entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        log.prepend(entry);
+    }
+
+    function mapSliderToAlt(val) { return Math.round(0.25 * val * val); }
+    function updateAltLabel(val) { document.getElementById('alt-val').innerText = mapSliderToAlt(val); }
+
+    document.addEventListener('click', () => { if (window.TacticalAudio) TacticalAudio.unlock(); }, { once: true });
+    window.addEventListener('load', () => { const slider = document.getElementById('alt-slider'); if (slider) updateAltLabel(slider.value); });
+
+    const map = L.map('map').setView(HOME_COORDS, 17);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    let homeMarker = L.marker(HOME_COORDS).addTo(map).bindPopup("<b>HIVE HOME</b>");
+
+    const impactIcon = L.divIcon({
+        className: 'impact-marker',
+        html: '<div style="font-size: 24px; animation: blink 0.3s infinite;">🔥</div>',
+        iconSize: [30, 30], iconAnchor: [15, 15]
+    });
+
+    socket.on('init_scenario', (config) => {
+        HOME_COORDS = [config.lat, config.lon];
+        map.setView(HOME_COORDS, config.zoom);
+        homeMarker.setLatLng(HOME_COORDS).bindPopup(`<b>${config.name}</b><br>COMMAND CENTER`).openPopup();
+        addLog(`SCENARIO: ${config.name} loaded`, "var(--neon)");
+    });
+
+    map.on('click', (e) => {
+        selectedCoords = e.latlng;
+        if(tempMarker) map.removeLayer(tempMarker);
+        tempMarker = L.circleMarker(e.latlng, {
+            color: 'var(--neon)', fillColor: 'var(--neon)', fillOpacity: 0.2,
+            radius: 12, weight: 2, dashArray: '5, 5'
+        }).addTo(map);
+        document.getElementById('btn-confirm').disabled = false;
+        updateActionBtn();
+        cancelWRA();
+    });
+
+    function updateActionBtn() {
+        const selId = document.getElementById('drone-sel').value;
+        const btn = document.getElementById('btn-strike');
+        if (selId === "ALL" || !selectedCoords) {
+            btn.disabled = true; btn.innerText = "ACTION"; return;
+        }
+        const cap = assetCapabilities[selId] || "SENSOR";
+        btn.innerText = ACTION_LABELS[cap] || "ACTION";
+        btn.disabled = false;
+    }
+
+    function cancelWRA(reason = "Aborted by operator") {
+        if (pendingStrike) {
+            clearTimeout(wraTimer); pendingStrike = null; updateActionBtn();
+            const btn = document.getElementById('btn-strike');
+            btn.style.background = "none"; btn.style.color = "var(--alert)";
+            addLog(`WRA: ${reason}`, "var(--warn)");
+        }
+    }
+
+    function triggerAction() {
+        const selId = document.getElementById('drone-sel').value;
+        const cap = assetCapabilities[selId] || "SENSOR";
+        if (cap === 'STRIKE') dispatchCommand('STRIKE', false);
+        else dispatchCommand(cap, true);
+    }
+
+    function dispatchCommand(type, isAuthorized = false) {
+        const selId = document.getElementById('drone-sel').value;
+        const currentAlt = mapSliderToAlt(document.getElementById('alt-slider').value);
+
+        if (type === 'STRIKE' && !isAuthorized) {
+            pendingStrike = { target_id: selId, coords: selectedCoords, alt: currentAlt };
+            const btn = document.getElementById('btn-strike');
+            btn.innerText = "ARMING (await)"; btn.style.background = "var(--alert)"; btn.style.color = "#000";
+            if (window.TacticalAudio) TacticalAudio.playMayday();
+            addLog("WRA REQUIRED: Confirm with [THUMBS UP] gesture within 30s", "var(--alert)");
+            wraTimer = setTimeout(() => { if (pendingStrike) cancelWRA("EXPIRED: Strike authorization failed"); }, 30000);
+            return;
+        }
+
+        const target = (isAuthorized && pendingStrike) ? pendingStrike : {
+            target_id: selId, coords: selectedCoords, alt: currentAlt
+        };
+
+        const y = target.coords ? (target.coords.lat - HOME_COORDS[0]) * 111111 : 0;
+        const x = target.coords ? (target.coords.lng - HOME_COORDS[1]) * (111111 * Math.cos(HOME_COORDS[0] * Math.PI / 180)) : 0;
+        
+        socket.emit('dispatch_mission', {
+            target_id: target.target_id,
+            command: (type === 'RTL') ? 'RTL' : 'MOVE',
+            mission: type, x: x, y: y, z: target.alt
+        });
+
+        if (type === 'STRIKE' || isAuthorized) {
+            const btn = document.getElementById('btn-strike');
+            btn.innerText = "ACTION EXECUTED";
+            setTimeout(() => { updateActionBtn(); btn.style.background = "none"; btn.style.color = "var(--alert)"; }, 2000);
+            pendingStrike = null; clearTimeout(wraTimer);
+        }
+        addLog(`CMD: ${type} dispatched to ${target.target_id}`, "var(--warn)");
+    }
+
+    function getOrCreateHex(id) {
+        let hex = document.getElementById(`hex-${id}`);
+        if(!hex) {
+            hex = document.createElement('div'); hex.className = 'hex'; hex.id = `hex-${id}`;
+            hex.innerHTML = `<img src="" style="opacity: 0.3;"><div class="hex-osd"><div class="id-tag">${id}</div><div class="status-content">INITIALIZING...</div></div>`;
+            document.getElementById('asset-grid').appendChild(hex);
+        }
+        return hex;
+    }
+
+    socket.on('asset_update', (d) => {
+        let hex = getOrCreateHex(d.id);
+        const img = hex.querySelector('img');
+        const osd = hex.querySelector('.hex-osd');
+        assetCapabilities[d.id] = d.capability;
+        if (![...document.getElementById('drone-sel').options].some(o => o.value === d.id)) {
+            const opt = document.createElement('option'); opt.value = d.id; opt.innerText = `${d.id} (${d.model})`;
+            document.getElementById('drone-sel').appendChild(opt);
+        }
+        const isDisconnected = d.status === 'DISCONNECTED';
+        const altColor = (d.battery < 20 || isDisconnected) ? 'var(--alert)' : 'var(--neon)';
+        const capIcon = CAP_ICONS[d.capability] || "📷";
+        if (isDisconnected) hex.classList.add('disconnected'); else hex.classList.remove('disconnected');
+        img.src = d.video_snapshot; img.style.transform = `rotate(${d.heading}deg)`;
+        osd.innerHTML = `<div class="id-tag">${capIcon} ${d.id}</div><div class="status-content"><span style="color:${altColor}">${Number(d.battery).toFixed(1)}% BAT | ${d.altitude}m AGL</span><span style="opacity:0.7; color:${altColor}">${d.status}</span></div>`;
+        if(!markers[d.id]) markers[d.id] = L.circleMarker([d.lat, d.lon], {color: 'lime', radius: 5}).addTo(map).bindTooltip(d.id, {permanent: true, direction: 'top'});
+        else markers[d.id].setLatLng([d.lat, d.lon]);
+    });
+
+    socket.on('target_update', (d) => {
+        const id = `target-${d.id}`;
+        if(!markers[id]) {
+            const targetIcon = L.divIcon({ className: 'target-marker', html: `<div style="font-size: 24px;">${d.icon || '⛵️'}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+            markers[id] = L.marker([d.lat, d.lon], {icon: targetIcon}).addTo(map).bindTooltip(d.id, {permanent: true, direction: 'bottom', offset: [0, 10]});
+        } else markers[id].setLatLng([d.lat, d.lon]);
+        if (d.detected && !announcedTargets.has(d.id)) {
+            announcedTargets.add(d.id); if (window.TacticalAudio) TacticalAudio.playDetection();
+            addLog(`FOUND: ${d.id} spotted by ${d.detected_by}!`, "var(--neon)");
+            if (searchAreas[d.id]) map.removeLayer(searchAreas[d.id]);
+        }
+    });
+
+    socket.on('mission_success', (d) => {
+        if (window.TacticalAudio) TacticalAudio.playSuccess();
+        addLog(`MISSION SUCCESS: ${d.id} secured!`, "var(--auth)");
+        const successIcon = L.divIcon({ className: 'success-marker', html: '<div style="font-size: 32px; animation: blink 0.5s infinite;">✅</div>', iconSize: [40, 40], iconAnchor: [20, 20] });
+        L.marker([d.lat, d.lon], {icon: successIcon}).addTo(map).bindPopup(`<b>MISSION COMPLETE</b><br>Target: ${d.id}`).openPopup();
+    });
+
+    socket.on('tactical_mayday', (d) => {
+        if (announcedTargets.has(d.id)) return;
+        if (!maydayStartTimes[d.id]) { maydayStartTimes[d.id] = Date.now(); if (window.TacticalAudio) TacticalAudio.playMayday(); addLog(`MAYDAY: ${d.id} - ${d.msg}`, "var(--alert)"); }
+        if (!searchAreas[d.id]) {
+            searchAreas[d.id] = L.circle([d.rough_lat, d.rough_lon], { color: 'var(--alert)', fillColor: 'var(--alert)', fillOpacity: 0.1, radius: d.radius || 500, dashArray: '10, 10' }).addTo(map);
+        }
+    });
+
+    socket.on('tactical_status', (d) => {
+        let hex = getOrCreateHex(d.sensor);
+        const osd = hex.querySelector('.hex-osd');
+        const img = hex.querySelector('img');
+        
+        if (d.status === 'OFFLINE') {
+            hex.classList.add('offline');
+            osd.innerHTML = `<div class="id-tag">${d.sensor}</div><div class="status-content" style="color:var(--alert)">OFFLINE</div>`;
+            return;
+        }
+        
+        hex.classList.remove('offline');
+
+        // Radar Rendering (Canvas)
+        if (d.sweep !== undefined) {
+            let canvas = hex.querySelector('canvas');
+            if (!canvas) {
+                canvas = document.createElement('canvas');
+                canvas.width = 200; canvas.height = 200;
+                canvas.style.position = 'absolute'; canvas.style.top = '5%'; canvas.style.left = '0';
+                canvas.style.width = '100%'; canvas.style.height = '90%';
+                canvas.style.zIndex = '0'; canvas.style.opacity = '0.8';
+                hex.insertBefore(canvas, osd);
+                if (img) img.style.display = 'none';
+            }
+            drawRadar(canvas, d);
+            osd.innerHTML = `<div class="id-tag">📡 ${d.sensor}</div><div class="status-content" style="color:var(--neon)">SCANNING [${d.range}m]</div>`;
+        } else if (d.snapshot) {
+            if (img) {
+                img.style.display = 'block';
+                img.src = `data:image/jpeg;base64,${d.snapshot}`;
+            }
+            osd.innerHTML = `<div class="id-tag">${d.sensor}</div><div class="status-content" style="color:var(--neon)">ONLINE</div>`;
+        }
+    });
+
+    function drawRadar(canvas, data) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width; const h = canvas.height;
+        const center = { x: w / 2, y: h / 2 };
+        const radius = w / 2 - 10;
+        const scale = radius / data.range;
+
+        // 1. Clear frame
+        ctx.clearRect(0, 0, w, h);
+
+        // Background Grid
+        ctx.strokeStyle = 'rgba(0, 255, 65, 0.15)';
+        ctx.lineWidth = 1;
+        for (let r = 1; r <= 3; r++) {
+            ctx.beginPath(); ctx.arc(center.x, center.y, (radius / 3) * r, 0, Math.PI * 2); ctx.stroke();
+        }
+
+        // 2. Draw Fading Sweep Tail (Conic Gradient)
+        const sweepRad = (data.sweep * Math.PI) / 180;
+        
+        // Conic gradient starts at sweepRad and goes CW.
+        // To have a trail BEHIND (CCW), we use the end of the gradient (0.5 to 1.0)
+        const grad = ctx.createConicGradient(sweepRad, center.x, center.y);
+        grad.addColorStop(1.0, 'rgba(0, 255, 65, 0.4)');   // Exactly at sweep line
+        grad.addColorStop(0.8, 'rgba(0, 255, 65, 0.1)');   // Fading CCW
+        grad.addColorStop(0.6, 'rgba(0, 255, 65, 0)');     // Transparent
+        
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        // Draw the arc CCW from sweepRad to cover the trail behind the line
+        ctx.arc(center.x, center.y, radius, sweepRad, sweepRad - Math.PI, true);
+        ctx.fill();
+
+        // 3. Main Sweep Line
+        ctx.strokeStyle = 'rgba(0, 255, 65, 1)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(center.x + Math.cos(sweepRad) * radius, center.y + Math.sin(sweepRad) * radius);
+        ctx.stroke();
+
+        // 4. Blips with Persistence & Audio
+        if (!radarPings[data.sensor]) radarPings[data.sensor] = {};
+        
+        if (data.blips) {
+            data.blips.forEach(b => {
+                const bRad = (b.angle * Math.PI) / 180;
+                const dist = b.dist * scale;
+                const bx = center.x + Math.cos(bRad) * dist;
+                const by = center.y + Math.sin(bRad) * dist;
+                
+                // diff is how many degrees the sweep is AHEAD of the blip (CW)
+                let diff = (data.sweep - b.angle + 360) % 360;
+                
+                if (diff < 180) { 
+                    const alpha = Math.pow(1.0 - (diff / 180), 1.5);
+                    
+                    // Robust Audio Trigger
+                    if (!radarPings[data.sensor][b.id]) radarPings[data.sensor][b.id] = { pinged: false };
+                    const state = radarPings[data.sensor][b.id];
+
+                    if (diff < 20) { // Window large enough for 10FPS/60dps jumps
+                        if (!state.pinged) {
+                            if (window.TacticalAudio) TacticalAudio.playRadarPing();
+                            state.pinged = true;
+                        }
+                    } else if (diff > 40) {
+                        state.pinged = false; // Reset for next revolution
+                    }
+
+                    // Draw Blip
+                    const isHitting = diff < 20;
+                    ctx.fillStyle = isHitting ? '#fff' : `rgba(0, 255, 65, ${alpha})`;
+                    ctx.shadowBlur = isHitting ? 15 : 5 * alpha;
+                    ctx.shadowColor = 'rgba(0, 255, 65, 1)';
+                    ctx.beginPath(); 
+                    ctx.arc(bx, by, isHitting ? 4 : 2.5, 0, Math.PI * 2); 
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    if (alpha > 0.5) {
+                        ctx.font = '8px Courier New';
+                        ctx.fillStyle = `rgba(0, 255, 65, ${alpha})`;
+                        ctx.fillText(b.id, bx + 6, by - 6);
+                    }
+                } else {
+                    // Ensure reset even if we missed the diff > 40 window
+                    if (radarPings[data.sensor][b.id]) radarPings[data.sensor][b.id].pinged = false;
+                }
+            });
+        }
+    }
+
+    socket.on('tactical_alert', (d) => {
+        let hex = getOrCreateHex(d.sensor); const img = hex.querySelector('img'); const osd = hex.querySelector('.hex-osd');
+        if(d.status === 'DETECTED') {
+            hex.classList.add('alerting'); img.src = `data:image/jpeg;base64,${d.snapshot}`;
+            osd.innerHTML = `<div class="id-tag">${d.sensor}</div><div class="status-content"><span style="border:1px solid var(--alert); padding:2px; color:var(--alert); font-weight:bold;">${d.detected}</span></div>`;
+            addLog(`ALERT: ${d.sensor} detected ${d.detected}`, "var(--alert)");
+        } else { hex.classList.remove('alerting', 'authorized'); osd.innerHTML = `<div class="id-tag">${d.sensor}</div><div class="status-content" style="color:var(--neon)">SCANNING...</div>`; }
+    });
+
+    socket.on('operator_confirmation', (d) => {
+        if (window.TacticalAudio) TacticalAudio.playWRA();
+        addLog(`AUTH: ${d.action} on ${d.sensor}`, "var(--auth)");
+        if (pendingStrike) dispatchCommand('STRIKE', true);
+    });
+
+    function sendAICommand() {
+        const input = document.getElementById('ai-input'); if (!input.value.trim()) return;
+        socket.emit('ai_objective', { text: input.value }); addLog(`AI: Objective submitted`, "var(--auth)"); input.value = "";
+    }
+
+    socket.on('ai_feedback', (d) => { document.getElementById('ai-status').innerText = `AI: ${d.status}`; if (d.log) addLog(`AI: ${d.log}`, "var(--auth)"); });
+
+    socket.on('weather_update', (d) => {
+        const weatherId = d.id || 'SENS';
+        const hexId = `hex-weather-${weatherId}`;
+        let hex = document.getElementById(hexId);
+        
+        if (!hex) {
+            hex = document.createElement('div'); hex.className = 'hex'; hex.id = hexId;
+            hex.style.borderColor = "rgba(0, 170, 255, 0.5)"; // Tactical Cyan
+            hex.innerHTML = `
+                <div class="hex-osd" style="justify-content: space-between;">
+                    <div class="id-tag" style="color:#00aaff; font-size:12px; margin-bottom: 5px;">${d.icon_type || '🌡️'} ${weatherId}</div>
+                    <div class="wind-compass" style="flex-grow: 1; display: flex; align-items: center; justify-content: center; width: 100%;">
+                        <div style="position: relative; width: 60px; height: 60px; border: 1px solid rgba(0,170,255,0.3); border-radius: 50%;">
+                            <div class="wind-arrow" style="position: absolute; top: 50%; left: 50%; width: 2px; height: 30px; background: #00aaff; transform-origin: center bottom; transition: transform 1s ease-in-out;">
+                                <div style="position: absolute; top: 0; left: -4px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid #00aaff;"></div>
+                            </div>
+                            <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 8px; color: #00aaff; opacity: 0.5;">N</div>
+                        </div>
+                    </div>
+                    <div id="content-${hexId}" class="status-content">...</div>
+                </div>`;
+            document.getElementById('asset-grid').prepend(hex);
+        }
+        
+        const content = document.getElementById(`content-${hexId}`);
+        const arrow = hex.querySelector('.wind-arrow');
+        
+        // Point WHERE the wind is blowing (Destination)
+        arrow.style.transform = `translate(-50%, -100%) rotate(${d.wind_deg}deg)`;
+        
+        content.innerHTML = `
+            <span style="color:#00aaff; font-size:18px; font-weight:bold; letter-spacing:1px;">${d.wind_speed.toFixed(1)} <small style="font-size:10px">m/s</small></span>
+            <span style="opacity:0.7; font-size:9px; margin-bottom:5px;">DIR: ${Math.round(d.wind_deg+180)}°</span>
+            <div style="border-top: 1px solid rgba(0,170,255,0.2); padding-top:5px; display:flex; gap:10px; justify-content:center; opacity:0.6; font-size:9px;">
+                <span>${d.temp.toFixed(1)}°C</span>
+                <span>${d.humidity.toFixed(1)}%</span>
+            </div>
+        `;
+    });
+</script>
+</body>
+</html>

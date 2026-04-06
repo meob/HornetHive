@@ -1,0 +1,64 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    ports: ["1883:1883", "9001:9001"]
+    volumes: ["./mosquitto.conf:/mosquitto/config/mosquitto.conf"]
+
+  gcs-backend:
+    build: { context: ., dockerfile: Dockerfile.node }
+    ports: ["3000:3000"]
+    command: ["node", "server.js", "--scenario", "FUKUSHIMA_PLANT", "--debug"]
+    environment: ["MQTT_HOST=mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+
+  radar-plant:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: ["PYTHONUNBUFFERED=1"]
+    command: ["python", "assets/radar_mock.py", "--id", "PLANT", "--range","2000", "--speed","30", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  drone-thermal1:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "SCOUT_01", "MINI_4", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  drone-thermal2:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "SCOUT_02", "MINI_4", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["drone-thermal1"]
+
+  drone-thermal3:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "SCOUT_03", "MINI_4", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["drone-thermal2"]
+
+  drone-thermal4:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "SCOUT_04", "MINI_4", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["drone-thermal3"]
+
+  drone-photo1:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "SCOUT_05", "MAVIC_3_T", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["drone-thermal4"]
+
+  drone-photo2:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "SCOUT_06", "MAVIC_3_T", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["drone-photo1"]
+
+  target-leak:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "LEAK on 5", "--type","☢︎", "--action","SENSOR", "--delay","10", "--pos","1110,900", "--area","400", "--drift","0.0", "--mqtt-host","mqtt-broker"]
+    depends_on: ["mqtt-broker"] 
+
+  target-intruder1:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "INTRUDER1", "--type","🪖", "--action","SENSOR", "--delay","60", "--offset","900,300", "--area","400", "--drift","0.1", "--mqtt-host","mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  target-intruder2:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "INTRUDER2", "--type","🪖", "--action","SENSOR", "--delay","120", "--offset","600,200", "--area","400", "--drift","0.1", "--mqtt-host","mqtt-broker"]
+    depends_on: ["mqtt-broker"]

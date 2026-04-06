@@ -1,0 +1,9 @@
+services:
+  # The central message broker
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"     # Standard MQTT port
+      - "9001:9001"     # WebSockets port for the HTML console
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf

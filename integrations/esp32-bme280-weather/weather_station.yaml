@@ -1,0 +1,65 @@
+# Configurazione ESPHome per Stazione Meteo Hornet Hive
+esphome:
+  name: weather-station-01
+  comment: "BME280 Tactical Weather Station for Hornet Hive"
+
+esp32:
+  board: esp32dev
+
+wifi:
+  ssid: "NOME_WIFI"
+  password: "PASSWORD"
+  
+  # Rende l'ESP32 un AP se non riesce a connettersi al WiFi
+  ap:
+    ssid: "HH-Weather-Config"
+
+captive_portal:
+
+# Dashboard web locale per debug veloce dei sensori
+web_server:
+  port: 80
+
+mqtt:
+  broker: 192.168.1.100
+  topic_prefix: "weather-station-01"
+
+logger:
+
+i2c:
+  sda: 21
+  scl: 22
+
+sensor:
+  - platform: bme280
+    temperature:
+      name: "Temperature"
+      id: bme_temp
+    humidity:
+      name: "Humidity"
+      id: bme_hum
+    pressure:
+      name: "Pressure"
+      id: bme_pres
+    address: 0x76
+    update_interval: 60s
+
+# Invio payload JSON compatibile con Hornet Hive Tactical HUD
+interval:
+  - interval: 1s # Heartbeat frequente per reattività UI
+    then:
+      - mqtt.publish_json:
+          topic: "hive/weather/SENS_IOT/telemetry"
+          retain: true
+          payload:
+            id: "SENS_IOT"
+            type: "WEATHER"
+            icon_type: "🌡️"
+            temp: !lambda "return id(bme_temp).state;"
+            humidity: !lambda "return id(bme_hum).state;"
+            pressure: !lambda "return id(bme_pres).state;"
+            wind_speed: 0.0
+            wind_deg: 0
+            description: "IOT SENSOR (BME280)"
+            icon: "50d"
+            city: "Home Hive"

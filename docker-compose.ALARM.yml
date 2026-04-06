@@ -1,0 +1,54 @@
+# HORNET HIVE - Security/Alarm Scenario
+# Usage: 
+# 1. Set variables: export TG_TOKEN="your_token" && export TG_CHAT="your_id"
+# 2. docker-compose -f docker-compose.ALARM.yml up --build
+
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    ports: ["1883:1883", "9001:9001"]
+    volumes: ["./mosquitto.conf:/mosquitto/config/mosquitto.conf"]
+
+  gcs-backend:
+    build: { context: ., dockerfile: Dockerfile.node }
+    ports: ["3000:3000"]
+    command: ["node", "server.js", "--scenario", "HORNET_HOME", "--log"]
+    environment: ["MQTT_HOST=mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  # Camera 1 (Heavy AI Image)
+  cam-01:
+    build: { context: ., dockerfile: Dockerfile.python }
+    command: [
+      "python", "assets/camera_bridge.py", 
+      "--id", "FRONT_DOOR", 
+      "--source", "${CAM_01_URL:-0}", 
+      "--targets", "person",
+      "--device", "cpu", 
+      "--mqtt-host", "mqtt-broker"
+    ]
+    depends_on: ["mqtt-broker"]
+
+  # Camera 2 (Heavy AI Image)
+  cam-02:
+    build: { context: ., dockerfile: Dockerfile.python }
+    command: [
+      "python", "assets/camera_bridge.py", 
+      "--id", "BACKYARD", 
+      "--source", "${CAM_02_URL:-1}", 
+      "--targets", "person",
+      "--device", "cpu", 
+      "--mqtt-host", "mqtt-broker"
+    ]
+    depends_on: ["mqtt-broker"]
+
+  # Telegram Notifier (Light Image)
+  telegram-bridge:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: [
+      "python", "assets/telegram_bridge.py", 
+      "--token", "${TG_TOKEN}", 
+      "--chat_id", "${TG_CHAT}", 
+      "--broker", "mqtt-broker"
+    ]
+    depends_on: ["mqtt-broker"]

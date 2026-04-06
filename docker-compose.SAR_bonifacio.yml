@@ -1,0 +1,55 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    ports: ["1883:1883", "9001:9001"]
+    volumes: ["./mosquitto.conf:/mosquitto/config/mosquitto.conf"]
+
+  gcs-backend:
+    build: { context: ., dockerfile: Dockerfile.node }
+    ports: ["3000:3000"]
+    command: ["node", "server.js", "--scenario", "BONIFACIO_STRAIT"]
+    environment: ["MQTT_HOST=mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => { if (r.ok) process.exit(0); else process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  radar-bonifacio:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: ["PYTHONUNBUFFERED=1"]
+    command: ["python", "assets/radar_mock.py", "--id", "VTS_BONIFACIO", "--range","5000", "--speed","30", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  weather-station:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: ["PYTHONUNBUFFERED=1"]
+    command: ["python", "assets/meteo_mock.py", "--id", "BASE", "--lat", "41.209279", "--lon", "9.275114", "--mqtt-host", "mqtt-broker", "--city", "Palau"]
+    depends_on: ["mqtt-broker"]
+
+  drone-alpha:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "ALPHA", "AR5_LIFE_RAY", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["radar-bonifacio"]
+
+  drone-bravo:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "BRAVO", "MAVIC_3_T", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["drone-alpha"]
+
+  drone-charlie:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "CHARLIE", "MAVIC_3_T", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["drone-bravo"]
+
+  drone-delta:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "DELTA", "MAVIC_3_T", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["drone-charlie"]
+
+  target-boat:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "Sailboat", "--type","⛵️", "--action","RESCUE_TUBE", "--offset","2900,1700", "--area","1000", "--radius","100", "--delay","10", "--drift","0.8", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["gcs-backend"]

@@ -1,0 +1,223 @@
+{
+  "RECREATIONAL": {
+    "HORNET": {
+      "type": "ROTARY",
+      "behavior_type": "STANDARD",
+      "origin": "AI",
+      "max_speed": 30.0, "climb_rate": 8.0, "battery_drain": 0.0,
+      "min_alt": 1, "max_alt": 500, "sensor": "Fake",
+      "capability": "SENSOR",
+      "description": "Powerful fictional drone."
+    },
+    "TELLO": {
+      "type": "ROTARY",
+      "behavior_type": "INDOOR",
+      "origin": "China",
+      "max_speed": 8.0, "climb_rate": 2.0, "battery_drain": 0.15,
+      "min_alt": 1, "max_alt": 10, "sensor": "720p Static",
+      "description": "Educational micro-drone for indoor use."
+    },
+    "MINI_4": {
+      "type": "ROTARY",
+      "behavior_type": "STANDARD",
+      "origin": "China",
+      "max_speed": 16.0, "climb_rate": 5.0, "battery_drain": 0.08,
+      "min_alt": 1, "max_alt": 120, "sensor": "4K 1/1.3 CMOS",
+      "capability": "SENSOR",
+      "description": "Ultralight consumer drone for high-quality video."
+    }
+  },
+  "PROFESSIONAL_SAR": {
+    "MAVIC_3_T": {
+      "type": "ROTARY",
+      "behavior_type": "STANDARD",
+      "origin": "China",
+      "max_speed": 21.0, "climb_rate": 6.0, "battery_drain": 0.05,
+      "min_alt": 5, "max_alt": 500, "sensor": "640×512 Thermal",
+      "capability": "SENSOR",
+      "description": "Firefighters & SAR specialist with thermal vision."
+    },
+    "MATRICE_350_RTK": {
+      "type": "ROTARY",
+      "behavior_type": "STANDARD",
+      "origin": "China",
+      "max_speed": 23.0, "climb_rate": 8.0, "battery_drain": 0.04,
+      "min_alt": 10, "max_alt": 1500, "sensor": "Zenmuse H20N Night Vision",
+      "capability": "MEDKIT",
+      "description": "Heavy-duty industrial platform for extreme environments."
+    },
+    "AR5_LIFE_RAY": {
+      "type": "FIXED_WING",
+      "stall_speed": 28.0,
+      "behavior_type": "STANDARD",
+      "origin": "Portugal",
+      "max_speed": 42.0, "climb_rate": 4.0, "battery_drain": 0.009,
+      "min_alt": 50, "max_alt": 5000, "sensor": "Maritime Radar & SATCOM",
+      "capability": "RESCUE_TUBE",
+      "description": "Specialized maritime SAR drone capable of dropping life rafts and long-range surveillance."
+    }
+  },
+  "LOGISTICS": {
+    "ZIPLINE": {
+      "type": "FIXED_WING",
+      "stall_speed": 18.0,
+      "behavior_type": "STANDARD",
+      "origin": "USA",
+      "max_speed": 40.0, "climb_rate": 5.0, "battery_drain": 0.03,
+      "min_alt": 50, "max_alt": 120, "sensor": "Frontal Obstacle",
+      "capability": "MEDKIT",
+      "description": "Medical delivery autonomous fixed-wing."
+    },
+    "WING_DRONE": {
+      "type": "ROTARY",
+      "behavior_type": "STANDARD",
+      "origin": "USA",
+      "max_speed": 30.0, "climb_rate": 4.0, "battery_drain": 0.05,
+      "min_alt": 10, "max_alt": 150, "sensor": "Downward Landing",
+      "capability": "SENSOR",
+      "description": "Alphabet Wing urban delivery drone."
+    },
+    "AGRAS_T40": {
+      "type": "ROTARY",
+      "behavior_type": "STANDARD",
+      "origin": "China",
+      "max_speed": 10.0, "climb_rate": 3.5, "battery_drain": 0.12,
+      "min_alt": 1, "max_alt": 30, "sensor": "Binocular Vision & Phased Array Radar",
+      "capability": "SENSOR",
+      "description": "Heavy-payload agricultural drone for precision spraying and spreading."
+    }
+  },
+  "MILITARY_TACTICAL": {
+    "EAGLE": {
+      "type": "FIXED_WING",
+      "stall_speed": 10.0,
+      "behavior_type": "STANDARD",
+      "origin": "AI",
+      "max_speed": 50.0, "climb_rate": 10.0, "battery_drain": 0.0,
+      "min_alt": 10, "max_alt": 1000, "sensor": "Fake",
+      "capability": "SENSOR",
+      "description": "Fictional wing drone."
+    },
+    "KESTREL": {
+      "type": "FIXED_WING",
+      "stall_speed": 10.0,
+      "behavior_type": "STANDARD",
+      "origin": "AI",
+      "max_speed": 50.0, "climb_rate": 10.0, "battery_drain": 0.0,
+      "min_alt": 10, "max_alt": 1000, "sensor": "Fake",
+      "capability": "STRIKE",
+      "description": "Fictional wing drone with STRIKE capability."
+    },
+    "R18": {
+      "type": "ROTARY",
+      "behavior_type": "STANDARD",
+      "origin": "Ukraine",
+      "max_speed": 55.0, "climb_rate": 5.0, "battery_drain": 0.04,
+      "min_alt": 1, "max_alt": 6000, "sensor": "Thermal",
+      "capability": "STRIKE",
+      "description": "Aerorozvidka R18 can be used by night."
+    },
+    "FALCO_EVO": {
+      "type": "FIXED_WING",
+      "stall_speed": 30.0,
+      "behavior_type": "STANDARD",
+      "origin": "Italy",
+      "max_speed": 55.0, "climb_rate": 5.0, "battery_drain": 0.01,
+      "min_alt": 100, "max_alt": 6000, "sensor": "Gabbiano TS Ultra-Light",
+      "capability": "STRIKE",
+      "description": "Leonardo's tactical MALE UAV for persistent surveillance."
+    },
+    "BAYRAKTAR_TB2": {
+      "type": "FIXED_WING",
+      "stall_speed": 25.0,
+      "behavior_type": "STANDARD",
+      "origin": "Turkey",
+      "max_speed": 61.0, "climb_rate": 4.0, "battery_drain": 0.008,
+      "min_alt": 50, "max_alt": 7600, "sensor": "Wescam MX-15D",
+      "capability": "STRIKE",
+      "description": "Battle-proven MALE UAV for ISTAR missions."
+    },
+    "SHAHED_136": {
+      "type": "FIXED_WING",
+      "stall_speed": 35.0,
+      "behavior_type": "KAMIKAZE",
+      "origin": "Iran",
+      "max_speed": 51.0, "climb_rate": 3.0, "battery_drain": 0.02,
+      "min_alt": 10, "max_alt": 4000, "sensor": "Inertial/Optical",
+      "capability": "STRIKE",
+      "description": "Loitering munition designed for swarm saturation."
+    },
+    "SWITCHBLADE_300": {
+      "type": "FIXED_WING",
+      "stall_speed": 15.0,
+      "behavior_type": "KAMIKAZE",
+      "origin": "USA",
+      "max_speed": 44.0, "climb_rate": 10.0, "battery_drain": 0.08,
+      "min_alt": 10, "max_alt": 4500, "sensor": "Dual EO/IR Camera",
+      "capability": "STRIKE",
+      "description": "Tube-launched loitering munition for precision infantry support."
+    },
+    "ORLAN_10": {
+      "type": "FIXED_WING",
+      "stall_speed": 22.0,
+      "behavior_type": "STANDARD",
+      "origin": "Russia",
+      "max_speed": 41.0, "climb_rate": 3.0, "battery_drain": 0.015,
+      "min_alt": 150, "max_alt": 5000, "sensor": "12-Camera Mosaic Payload",
+      "capability": "SENSOR",
+      "description": "Tactical UAV used for ISR and artillery fire correction."
+    }
+  },
+  "MILITARY_STRATEGIC": {
+    "MQ_9_REAPER": {
+      "type": "FIXED_WING",
+      "stall_speed": 40.0,
+      "behavior_type": "STANDARD",
+      "origin": "USA",
+      "max_speed": 130.0, "climb_rate": 15.0, "battery_drain": 0.005,
+      "min_alt": 100, "max_alt": 15000, "sensor": "MTS-B Multi-Spectral",
+      "capability": "STRIKE",
+      "description": "Strategic hunter-killer UAV."
+    },
+    "MQ_4C_TRITON": {
+      "type": "FIXED_WING",
+      "stall_speed": 50.0,
+      "behavior_type": "STANDARD",
+      "origin": "USA",
+      "max_speed": 160.0, "climb_rate": 10.0, "battery_drain": 0.003,
+      "min_alt": 1000, "max_alt": 18000, "sensor": "ZPY-3 MFAS Radar",
+      "capability": "SENSOR",
+      "description": "High-altitude long-endurance maritime surveillance."
+    },
+    "HERON_TP": {
+      "type": "FIXED_WING",
+      "stall_speed": 35.0,
+      "behavior_type": "STANDARD",
+      "origin": "Israel",
+      "max_speed": 110.0, "climb_rate": 12.0, "battery_drain": 0.006,
+      "min_alt": 200, "max_alt": 14000, "sensor": "EO/IR/SAR Payload",
+      "capability": "STRIKE",
+      "description": "All-weather strategic UAV for deep intelligence missions."
+    },
+    "RQ_4_GLOBAL_HAWK": {
+      "type": "FIXED_WING",
+      "stall_speed": 60.0,
+      "behavior_type": "STANDARD",
+      "origin": "USA",
+      "max_speed": 172.0, "climb_rate": 15.0, "battery_drain": 0.002,
+      "min_alt": 5000, "max_alt": 18000, "sensor": "HISAR SAR/MTI Radar",
+      "capability": "SENSOR",
+      "description": "High-altitude long-endurance strategic reconnaissance."
+    },
+    "PHANTOM": {
+      "type": "FIXED_WING",
+      "stall_speed": 10.0,
+      "behavior_type": "STANDARD",
+      "origin": "AI",
+      "max_speed": 340.0, "climb_rate": 10.0, "battery_drain": 0.0,
+      "min_alt": 10, "max_alt": 1000, "sensor": "Fake",
+      "capability": "SENSOR",
+      "description": "Fictional wing drone with ultra-high-speed (Mach 1) for rapid map exploration."
+    }
+  }
+}

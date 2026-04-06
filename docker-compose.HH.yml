@@ -1,0 +1,22 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:latest
+    ports: ["1883:1883", "9001:9001"]
+    volumes: ["./mosquitto.conf:/mosquitto/config/mosquitto.conf"]
+
+  gcs-backend:
+    build: { context: ., dockerfile: Dockerfile.node }
+    ports: ["3000:3000"]
+    command: ["node", "server.js", "--scenario", "HORNET_HOME"]
+    environment: ["MQTT_HOST=mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  drone-mini4:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/drone_mock.py", "DJI MINI4", "MINI_4", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]
+
+  target-horse:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    command: ["python", "assets/target_mock.py", "Horse NN", "--type","🐴", "--offset","200,100", "--area","100", "--radius","30", "--delay","8", "--action","SENSOR", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["mqtt-broker"]

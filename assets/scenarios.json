@@ -1,0 +1,69 @@
+{
+  "HORNET_HOME": {
+    "lat": 44.960408, "lon": 7.578401, "zoom": 17,
+    "mission_type": "TRAINING",
+    "description": "Primary Training Facility. Ideal for flight dynamics testing."
+  },
+  "TRINO_PLANT": {
+    "lat": 45.184603, "lon": 8.275851, "zoom": 16,
+    "mission_type": "DEFENSE",
+    "description": "Dismissed nuclear plant. Surveillance required for illegal entry detection."
+  },
+  "FUKUSHIMA_PLANT": {
+    "lat": 37.420325, "lon": 141.019730, "zoom": 16,
+    "mission_type": "DEFENSE",
+    "description": "Disaster Response Zone. High radiation risk. Rotate assets to monitor plant and reactors.",
+    "spatial_markers": {
+        "Reactor_1": {"x": 1150, "y": 300, "z": 30},
+        "Reactor_2": {"x": 1140, "y": 205, "z": 30},
+        "Reactor_3": {"x": 1150, "y":  75, "z": 30},
+        "Reactor_4": {"x": 1145, "y": -60, "z": 30},
+        "Reactor_5": {"x": 1110, "y": 900, "z": 50},
+        "Reactor_6": {"x": 1120, "y": 1005, "z": 50},
+        "North_Cooling_Pool": {"x": 1400, "y":  970, "z": 10},
+        "South_Cooling_Pool": {"x": 1405, "y":  120, "z": 10}
+    }
+  },
+  "CHERNOBYL_PLANT": {
+    "lat": 51.373649, "lon": 30.119855, "zoom": 15,
+    "mission_type": "DEFENSE",
+    "description": "Exclusion Zone. Long-range surveillance required for illegal entry detection."
+  },
+  "MUSEUM": {
+    "lat": 45.069904, "lon": 7.509654, "zoom": 17,
+    "mission_type": "DEFENSE",
+    "description": "High-Value Asset Protection (Castello di Rivoli). Monitor for unauthorized access in restricted galleries."
+  },
+  "BONIFACIO_STRAIT": {
+    "lat": 41.209279, "lon": 9.275114, "zoom": 13,
+    "mission_type": "SAR",
+    "description": "Maritime SAR. High currents. Search for distress signals from vessels."
+  },
+  "MONVISO_ALPINE": {
+    "lat": 44.665599, "lon": 7.110370, "zoom": 14,
+    "mission_type": "SAR",
+    "description": "Alpine SAR. High altitude. Search for missing climbers."
+  },
+  "TORINO_MEDICAL": {
+    "lat": 45.037597, "lon": 7.675664, "zoom": 14,
+    "mission_type": "LOGISTICS",
+    "description": "Urban Logistics (Molinette Hospital). Organ/Blood transport corridor.",
+    "spatial_markers": {
+        "Molinette_Hub": {"x": 100, "y":   0, "z": 40},
+        "San_Giovanni": {"x": 100, "y": -10, "z": 40},
+        "CTO_Emergency": {"x": 100, "y": -20, "z": 40}
+    }
+  },
+  "ERBIL_BASE": {
+    "lat": 36.232372, "lon": 43.969404, "zoom": 15,
+    "mission_type": "MILITARY",
+    "description": "Forward Operating Base (Iraq). Perimeter defense and convoy overwatch."
+  }
+
+, "ACQUI": {
+    "lat": 44.668652, "lon": 8.452059, "zoom": 18,
+    "mission_type": "TRAINING",
+    "description": "Training Facility. For flight dynamics testing."
+  }
+}
+

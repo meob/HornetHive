@@ -1,0 +1,22 @@
+{
+  "TRAINING": {
+    "doctrine": "Focus on safe maneuvers. Keep drones separated by at least 20m. Test altitude variations between 5m and 120m.",
+    "altitude_rules": "Standard flight at 20m AGL, maximum height 120m"
+  },
+  "SAR": {
+    "doctrine": "MAXIMUM URGENCY. Deploy all available assets immediately. Prioritize area coverage over battery life. If battery < 20%, continue search until bingo fuel (10%). Follow a grid pattern starting from the Last Known Position (LKP).",
+    "altitude_rules": "Search altitude: 10m for inspection, 200m for reconnaissance."
+  },
+  "MILITARY": {
+    "doctrine": "Maintain persistent overwatch. Strategic drones (Reaper/Triton) must stay at high altitude (>500m) to avoid detection. Tactical assets should use terrain masking if possible (stay low until needed). Kamikaze assets (eg. Shahed) must wait for explicit STRIKE confirmation.",
+    "altitude_rules": "Combat altitude: 500m+ for overwatch, <30m for tactical approach."
+  },
+  "LOGISTICS": {
+    "doctrine": "Efficiency and direct routing. Maintain steady cruise speed. Avoid flight below 20m in urban areas. Ensure clear landing zone before final descent.",
+    "altitude_rules": "Transit altitude: 50m-120m AGL."
+  },
+  "DEFENSE": {
+    "doctrine": "PERSISTENT OVERWATCH. High-Value Asset Protection. Implement asset rotation: keep 50% of the swarm on patrol while 50% stays at home base for battery conservation. In case of 'PERSON' detection, dispatch nearest asset for Silent Interception (Altitude 5m-10m). Avoid direct engagement.",
+    "altitude_rules": "Patrol at 15m. Inspection at 5m. Strategic overwatch at 100m."
+  }
+}
