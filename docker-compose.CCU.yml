@@ -1,0 +1,71 @@
+services:
+  mqtt:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    ports:
+      - "3000:3000"
+    environment:
+      - MQTT_HOST=mqtt
+    depends_on:
+      - mqtt
+    command: ["node", "server.js", "--scenario", "TORINO_MEDICAL"]
+
+  # --- PATIENT 01: STABLE ---
+  p1_ecg:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P1_0_ECG", "--type", "CARDIAC", "--metric", "ECG", "--unit", "mV", "--min", "-5", "--max", "15", "--trend", "heartbeat", "--freq", "0.1", "--mqtt-host", "mqtt"]
+
+  p1_bpm:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P1_1_BPM", "--type", "CARDIAC", "--metric", "HEART_RATE", "--unit", "bpm", "--min", "65", "--max", "80", "--trend", "sine", "--freq", "1", "--mqtt-host", "mqtt"]
+
+  p1_spo2:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P1_2_SPO2", "--type", "VITAL", "--metric", "O2_SAT", "--unit", "%", "--min", "97", "--max", "99", "--trend", "stable", "--freq", "2", "--mqtt-host", "mqtt"]
+
+  p1_sys:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P1_3_SYS", "--type", "VITAL", "--metric", "BP_SYS", "--unit", "mmHg", "--min", "115", "--max", "125", "--trend", "drift", "--freq", "1", "--mqtt-host", "mqtt"]
+
+  p1_temp:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P1_4_TEMP", "--type", "VITAL", "--metric", "TEMP", "--unit", "°C", "--min", "36.5", "--max", "37.1", "--trend", "stable", "--freq", "2", "--mqtt-host", "mqtt"]
+
+  # --- PATIENT 02: CRITICAL ---
+  p2_ecg:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P2_0_ECG", "--type", "CARDIAC", "--metric", "ECG", "--unit", "mV", "--min", "-5", "--max", "20", "--trend", "heartbeat", "--freq", "0.06", "--mqtt-host", "mqtt"]
+
+  p2_bpm:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P2_1_BPM", "--type", "CARDIAC", "--metric", "HEART_RATE", "--unit", "bpm", "--min", "105", "--max", "130", "--trend", "sine", "--freq", "1", "--mqtt-host", "mqtt"]
+
+  p2_spo2:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P2_2_SPO2", "--type", "VITAL", "--metric", "O2_SAT", "--unit", "%", "--min", "88", "--max", "93", "--trend", "drift", "--freq", "2", "--mqtt-host", "mqtt"]
+
+  p2_sys:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P2_3_SYS", "--type", "VITAL", "--metric", "BP_SYS", "--unit", "mmHg", "--min", "85", "--max", "105", "--trend", "drift", "--freq", "1", "--mqtt-host", "mqtt"]
+
+  p2_temp:
+    build: { context: ., dockerfile: Dockerfile.python-light }
+    environment: [ MQTT_HOST=mqtt ]
+    command: ["python", "assets/data_mock.py", "P2_4_TEMP", "--type", "VITAL", "--metric", "TEMP", "--unit", "°C", "--min", "38.5", "--max", "39.9", "--trend", "stable", "--freq", "2", "--mqtt-host", "mqtt"]

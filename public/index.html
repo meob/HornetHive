@@ -128,6 +128,8 @@
     const announcedTargets = new Set();
     const maydayStartTimes = {};
     const radarPings = {}; // sensorId: { blipId: { pinged: boolean } }
+    const dataHistory = {}; // id: [ {v, ts} ]
+    const COLORS = { neon: '#00ff41', alert: '#ff3131', warn: '#ffcc00', auth: '#ff00ff', cyan: '#00aaff' };
     
     let HOME_COORDS = [44.960409, 7.578401]; 
     let selectedCoords = null;
@@ -249,14 +251,77 @@
         let hex = document.getElementById(`hex-${id}`);
         if(!hex) {
             hex = document.createElement('div'); hex.className = 'hex'; hex.id = `hex-${id}`;
-            hex.innerHTML = `<img src="" style="opacity: 0.3;"><div class="hex-osd"><div class="id-tag">${id}</div><div class="status-content">INITIALIZING...</div></div>`;
+            hex.innerHTML = `<img src="" style="opacity: 0.3;"><canvas class="sparkline"></canvas><div class="hex-osd"><div class="id-tag">${id}</div><div class="status-content">INITIALIZING...</div></div>`;
             document.getElementById('asset-grid').appendChild(hex);
+            
+            const canvas = hex.querySelector('.sparkline');
+            canvas.width = 180; canvas.height = 210;
+            canvas.style.position = 'absolute'; canvas.style.top = '0'; canvas.style.left = '0';
+            canvas.style.zIndex = '2'; canvas.style.opacity = '0.4';
         }
         return hex;
     }
 
+    function drawSparkline(hexId, val, color, windowSec = 0) {
+        if (!dataHistory[hexId]) dataHistory[hexId] = [];
+        const now = Date.now();
+        
+        // Push new point
+        dataHistory[hexId].push({ v: val, ts: now });
+        
+        // Cleanup old data (keep last 50 points)
+        if (dataHistory[hexId].length > 50) dataHistory[hexId].shift();
+
+        const hex = document.getElementById(hexId);
+        if (!hex) return;
+        const canvas = hex.querySelector('.sparkline');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        
+        const history = dataHistory[hexId];
+        if (history.length < 2) return;
+
+        // Resolve tactical color names to hex
+        const drawColor = COLORS[color] || color || COLORS.neon;
+
+        let drawPoints = history;
+        if (windowSec > 0) {
+            drawPoints = [];
+            for (let i = 0; i < history.length; i += 2) {
+                const slice = history.slice(i, i + 2);
+                const avg = slice.reduce((a, b) => a + b.v, 0) / slice.length;
+                drawPoints.push({ v: avg });
+            }
+        }
+
+        const w = canvas.width; const h = canvas.height;
+        const padding = 60;
+        const values = drawPoints.map(p => p.v);
+        const minV = Math.min(...values) * 0.95;
+        const maxV = Math.max(...values) * 1.05;
+        const range = (maxV - minV) || 1;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.beginPath();
+        ctx.strokeStyle = drawColor;
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+
+        drawPoints.forEach((p, i) => {
+            const x = (i / (drawPoints.length - 1)) * (w - 40) + 20;
+            const y = h - ((p.v - minV) / range) * (h - padding * 2) - padding;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        
+        // Glow effect for visibility
+        ctx.shadowBlur = 10; ctx.shadowColor = drawColor; ctx.stroke(); ctx.shadowBlur = 0;
+    }
+
     socket.on('asset_update', (d) => {
         let hex = getOrCreateHex(d.id);
+        const hexId = `hex-${d.id}`;
         const img = hex.querySelector('img');
         const osd = hex.querySelector('.hex-osd');
         assetCapabilities[d.id] = d.capability;
@@ -269,9 +334,53 @@
         const capIcon = CAP_ICONS[d.capability] || "📷";
         if (isDisconnected) hex.classList.add('disconnected'); else hex.classList.remove('disconnected');
         img.src = d.video_snapshot; img.style.transform = `rotate(${d.heading}deg)`;
-        osd.innerHTML = `<div class="id-tag">${capIcon} ${d.id}</div><div class="status-content"><span style="color:${altColor}">${Number(d.battery).toFixed(1)}% BAT | ${d.altitude}m AGL</span><span style="opacity:0.7; color:${altColor}">${d.status}</span></div>`;
+        
+        // Min-Max Calculation for Battery
+        const history = dataHistory[hexId] || [];
+        const vals = history.map(h => h.v);
+        const min = vals.length ? Math.min(...vals).toFixed(0) : 0;
+        const max = vals.length ? Math.max(...vals).toFixed(0) : 0;
+        const rangeText = history.length > 5 ? `<span style="opacity:0.4; font-size:9px">Range: ${min}-${max}%</span>` : '';
+
+        osd.innerHTML = `
+            <div class="id-tag">${capIcon} ${d.id}</div>
+            <div class="status-content">
+                <span style="color:${altColor}">${Number(d.battery).toFixed(1)}% BAT | ${d.altitude}m AGL</span>
+                <span style="opacity:0.7; color:${altColor}">${d.status}</span>
+                ${rangeText}
+            </div>`;
         if(!markers[d.id]) markers[d.id] = L.circleMarker([d.lat, d.lon], {color: 'lime', radius: 5}).addTo(map).bindTooltip(d.id, {permanent: true, direction: 'top'});
         else markers[d.id].setLatLng([d.lat, d.lon]);
+        
+        if (d.battery !== undefined) drawSparkline(hexId, d.battery, 'neon');
+    });
+
+    socket.on('data_update', (d) => {
+        let hex = getOrCreateHex(d.id);
+        const hexId = `hex-${d.id}`;
+        const osd = hex.querySelector('.hex-osd');
+        const colorName = d.status === 'WARNING' ? 'warn' : (d.status === 'ALERT' ? 'alert' : 'neon');
+        const colorValue = `var(--${colorName})`;
+        
+        // Min-Max Calculation
+        const history = dataHistory[hexId] || [];
+        const vals = history.map(h => h.v);
+        const min = vals.length ? Math.min(...vals).toFixed(1) : 0;
+        const max = vals.length ? Math.max(...vals).toFixed(1) : 0;
+        const rangeText = history.length > 5 ? `<span style="opacity:0.4; font-size:9px">Range: ${min}-${max}${d.u}</span>` : '';
+
+        osd.innerHTML = `
+            <div class="id-tag" style="color:${colorValue}; line-height: 1.1;">
+                ${d.id}<br>
+                <small style="font-size: 10px; opacity: 0.6;">${d.metric}</small>
+            </div>
+            <div class="status-content">
+                <span style="font-size:24px; font-weight:bold; color:${colorValue}">${d.v}<small style="font-size:10px">${d.u}</small></span>
+                <span style="opacity:0.6; font-size:9px">${d.type}</span>
+                ${rangeText}
+            </div>
+        `;
+        drawSparkline(hexId, d.v, colorName);
     });
 
     socket.on('target_update', (d) => {
@@ -492,6 +601,8 @@
                 <span>${d.humidity.toFixed(1)}%</span>
             </div>
         `;
+
+        if (d.wind_speed !== undefined) drawSparkline(hexId, d.wind_speed, '#00aaff', 5);
     });
 </script>
 </body>

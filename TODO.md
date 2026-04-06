@@ -1,8 +1,14 @@
 # 📋 HORNET HIVE - Project Roadmap & TODO
 
+The **Drone Simulation** component is complete, even if not perfect, in every aspect: flight physics, battery management, satellite view, and controls. Integration with **External Sensors** such as RTSP cameras, object detection, standard/DIY sensors, and alarms with Telegram 
+is also complete but requires specific customization and configuration. 
+**Drone Swarm** management, **Real Drone integration** and **AI-assisted flight control** are a proof of concept (POC) and can be extended in various directions.
+
 ## 🕹️ Gaming & Simulation
 - [ ] **Multi-Waypoint Missions**: Allow users to click multiple points on the map to define a complex flight path.
 - [ ] **Scenario Editor**: A UI tool to add new scenarios (Lat/Lon/Zoom) without editing JSON.
+- [ ] **UI Reordering (Drag & Drop)**: Allow operators to manually move hexagons to customize the C2 layout.
+- [ ] **Honeycomb Zoom**: Add a slider to scale the hexagonal grid for better visibility on different screens.
 - [x] **Spatial Markers (POI)**: Ability to define Points of Interest for the AI Commander.
 - [x] **Tactical Radar**: Proximity radar mock for spatial awareness implemented.
 - [x] **POI Expansion**: Scenarios (eg. Fukushima) now can include tactical offsets and targets.
@@ -23,10 +29,11 @@
 - [ ] **MAVLink Full Support**: Move from POC to a stable bridge supporting ArduPilot/PX4 missions.
 - [x] **WRA Logic (Weapon Release)**: Gesture-based strike authorization implemented with 30s timeout.
 - [x] **Notification System**: Telegram Bridge implemented for real-time mobile alerts with photo proof.
-- [ ] **Sensors**: IoT sensors support.
+- [ ] **Sensors**: Wider IoT sensors support.
 
 ## 🛡️ Stability & Security
 - [x] **Tiered Logging**: Standardized logging with --log and --debug flags implemented.
+- [ ] **Data Alarm Bridge**: Generic threshold-based alerting logic (Medical Emergency, Fire, Industrial Failure).
 - [ ] **Authentication**: Add a login layer to the C4I Dashboard.
 - [ ] **NIS2/PRESTO Compliance**: Research and implement encryption (TLS/AES) for MQTT and RTSP streams.
 - [ ] **Heartbeat Optimization**: More robust handling of high-latency MQTT connections.

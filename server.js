@@ -86,7 +86,7 @@ let aiWatchdogTimer = null;
 
 mqttClient.on('connect', () => {
     console.log("\x1b[32m[*] GCS BACKEND: Connected to MQTT Broker\x1b[0m");
-    mqttClient.subscribe(['hive/drone/+/telemetry', 'hive/alerts/#', 'hive/operator/confirm', 'hive/ai/feedback', 'hive/swarm/target', 'hive/target/+/telemetry', 'hive/weather/+/telemetry']);
+    mqttClient.subscribe(['hive/drone/+/telemetry', 'hive/alerts/#', 'hive/operator/confirm', 'hive/ai/feedback', 'hive/swarm/target', 'hive/target/+/telemetry', 'hive/weather/+/telemetry', 'hive/data/+/telemetry']);
     
     // Publish Scenario Config (Retained) for Drones
     mqttClient.publish('hive/sys/config', JSON.stringify({
@@ -179,6 +179,12 @@ mqttClient.on('message', (topic, message) => {
         activeAssets[`W_${weatherId}`] = { ...data, lastSeen: Date.now(), type: 'WEATHER' };
         io.emit('weather_update', data);
     }
+    else if (topic.includes('data/')) {
+        logColor = "\x1b[36m"; // Cyan
+        isTacticalEvent = false;
+        activeAssets[`D_${data.id}`] = { ...data, lastSeen: Date.now(), type: 'DATA' };
+        io.emit('data_update', data);
+    }
 
     const logEntry = `[${timestamp}] ${topic} -> ${JSON.stringify(data)}`;
     
@@ -244,6 +250,7 @@ io.on('connection', (socket) => {
         if (asset.type === 'TARGET') socket.emit('target_update', asset);
         if (asset.type === 'MAYDAY') socket.emit('tactical_mayday', asset);
         if (asset.type === 'WEATHER') socket.emit('weather_update', asset);
+        if (asset.type === 'DATA') socket.emit('data_update', asset);
         if (asset.type === 'SENSOR') socket.emit('tactical_status', { 
             ...asset,
             sensor: asset.id
