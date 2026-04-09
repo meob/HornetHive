@@ -73,6 +73,10 @@
     .hex.offline, .hex.disconnected { border: 2px solid #ff3131 !important; filter: grayscale(100%); opacity: 0.5; }
     .hex.offline .hex-osd, .hex.disconnected .hex-osd { color: #ff3131 !important; font-weight: bold; }
 
+    /* Drag and Drop Styles */
+    .hex.dragging { opacity: 0.4; border-style: dashed !important; transform: scale(0.9); }
+    .hex.drag-over { border-color: #fff !important; box-shadow: 0 0 15px #fff; z-index: 10; }
+
     @keyframes blink { from { opacity: 1; } to { opacity: 0.4; } }
     
     #map { flex: 1; filter: invert(100%) hue-rotate(180deg) brightness(0.7); }
@@ -247,12 +251,66 @@
         addLog(`CMD: ${type} dispatched to ${target.target_id}`, "var(--warn)");
     }
 
+    // --- Drag and Drop Logic ---
+    let draggedElement = null;
+
+    function initDragEvents(el) {
+        el.draggable = true;
+        el.addEventListener('dragstart', (e) => {
+            draggedElement = el;
+            el.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', el.id);
+        });
+
+        el.addEventListener('dblclick', (e) => {
+            const id = el.dataset.id;
+            const type = el.dataset.type;
+            if (id && type) {
+                window.open(`zoom.html?id=${id}&type=${type}`, `zoom_${id}`, 'popup=yes,width=1000,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes');
+            }
+        });
+
+        el.addEventListener('dragover', (e) => {
+            if (e.preventDefault) e.preventDefault(); 
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        });
+
+        el.addEventListener('dragenter', () => el.classList.add('drag-over'));
+        el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+
+        el.addEventListener('drop', (e) => {
+            if (e.stopPropagation) e.stopPropagation();
+            if (draggedElement !== el) {
+                const grid = document.getElementById('asset-grid');
+                const allHex = Array.from(grid.querySelectorAll('.hex'));
+                const draggedIdx = allHex.indexOf(draggedElement);
+                const targetIdx = allHex.indexOf(el);
+                
+                if (draggedIdx < targetIdx) {
+                    el.after(draggedElement);
+                } else {
+                    el.before(draggedElement);
+                }
+            }
+            return false;
+        });
+
+        el.addEventListener('dragend', () => {
+            const allHex = document.querySelectorAll('.hex');
+            allHex.forEach(h => h.classList.remove('dragging', 'drag-over'));
+            draggedElement = null;
+        });
+    }
+
     function getOrCreateHex(id) {
         let hex = document.getElementById(`hex-${id}`);
         if(!hex) {
             hex = document.createElement('div'); hex.className = 'hex'; hex.id = `hex-${id}`;
             hex.innerHTML = `<img src="" style="opacity: 0.3;"><canvas class="sparkline"></canvas><div class="hex-osd"><div class="id-tag">${id}</div><div class="status-content">INITIALIZING...</div></div>`;
             document.getElementById('asset-grid').appendChild(hex);
+            initDragEvents(hex);
             
             const canvas = hex.querySelector('.sparkline');
             canvas.width = 180; canvas.height = 210;
@@ -332,6 +390,7 @@
         const isDisconnected = d.status === 'DISCONNECTED';
         const altColor = (d.battery < 20 || isDisconnected) ? 'var(--alert)' : 'var(--neon)';
         const capIcon = CAP_ICONS[d.capability] || "📷";
+        hex.dataset.type = "asset"; hex.dataset.id = d.id;
         if (isDisconnected) hex.classList.add('disconnected'); else hex.classList.remove('disconnected');
         img.src = d.video_snapshot; img.style.transform = `rotate(${d.heading}deg)`;
         
@@ -352,12 +411,14 @@
         if(!markers[d.id]) markers[d.id] = L.circleMarker([d.lat, d.lon], {color: 'lime', radius: 5}).addTo(map).bindTooltip(d.id, {permanent: true, direction: 'top'});
         else markers[d.id].setLatLng([d.lat, d.lon]);
         
-        if (d.battery !== undefined) drawSparkline(hexId, d.battery, 'neon');
+        // Regression Fix: Do not draw battery sparkline on asset hexagons
+        // if (d.battery !== undefined) drawSparkline(hexId, d.battery, 'neon');
     });
 
     socket.on('data_update', (d) => {
         let hex = getOrCreateHex(d.id);
         const hexId = `hex-${d.id}`;
+        hex.dataset.type = "data"; hex.dataset.id = d.id;
         const osd = hex.querySelector('.hex-osd');
         const colorName = d.status === 'WARNING' ? 'warn' : (d.status === 'ALERT' ? 'alert' : 'neon');
         const colorValue = `var(--${colorName})`;
@@ -367,7 +428,7 @@
         const vals = history.map(h => h.v);
         const min = vals.length ? Math.min(...vals).toFixed(1) : 0;
         const max = vals.length ? Math.max(...vals).toFixed(1) : 0;
-        const rangeText = history.length > 5 ? `<span style="opacity:0.4; font-size:9px">Range: ${min}-${max}${d.u}</span>` : '';
+        const rangeText = history.length > 5 ? `<span style="opacity:0.8; font-size:9px">Range: ${min}-${max}${d.u}</span>` : '';
 
         osd.innerHTML = `
             <div class="id-tag" style="color:${colorValue}; line-height: 1.1;">
@@ -376,8 +437,8 @@
             </div>
             <div class="status-content">
                 <span style="font-size:24px; font-weight:bold; color:${colorValue}">${d.v}<small style="font-size:10px">${d.u}</small></span>
-                <span style="opacity:0.6; font-size:9px">${d.type}</span>
                 ${rangeText}
+                <span style="opacity:0.6; font-size:9px">${d.type}</span>
             </div>
         `;
         drawSparkline(hexId, d.v, colorName);
@@ -413,6 +474,7 @@
 
     socket.on('tactical_status', (d) => {
         let hex = getOrCreateHex(d.sensor);
+        hex.dataset.type = "tactical"; hex.dataset.id = d.sensor;
         const osd = hex.querySelector('.hex-osd');
         const img = hex.querySelector('img');
         
@@ -543,6 +605,7 @@
 
     socket.on('tactical_alert', (d) => {
         let hex = getOrCreateHex(d.sensor); const img = hex.querySelector('img'); const osd = hex.querySelector('.hex-osd');
+        hex.dataset.type = "tactical"; hex.dataset.id = d.sensor;
         if(d.status === 'DETECTED') {
             hex.classList.add('alerting'); img.src = `data:image/jpeg;base64,${d.snapshot}`;
             osd.innerHTML = `<div class="id-tag">${d.sensor}</div><div class="status-content"><span style="border:1px solid var(--alert); padding:2px; color:var(--alert); font-weight:bold;">${d.detected}</span></div>`;
@@ -570,6 +633,7 @@
         
         if (!hex) {
             hex = document.createElement('div'); hex.className = 'hex'; hex.id = hexId;
+            hex.dataset.type = "weather"; hex.dataset.id = weatherId;
             hex.style.borderColor = "rgba(0, 170, 255, 0.5)"; // Tactical Cyan
             hex.innerHTML = `
                 <div class="hex-osd" style="justify-content: space-between;">
@@ -585,6 +649,7 @@
                     <div id="content-${hexId}" class="status-content">...</div>
                 </div>`;
             document.getElementById('asset-grid').prepend(hex);
+            initDragEvents(hex);
         }
         
         const content = document.getElementById(`content-${hexId}`);

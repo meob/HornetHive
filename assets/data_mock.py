@@ -8,20 +8,27 @@ import argparse
 def main():
     parser = argparse.ArgumentParser(description="HORNET HIVE | Universal Data Mock")
     parser.add_argument("id", help="Asset ID (e.g. PATIENT_01)")
-    parser.add_argument("--type", default="GENERIC", help="Asset Type (e.g. MEDICAL, ENERGY)")
-    parser.add_argument("--metric", default="Value", help="Metric Name (e.g. BPM, Temp)")
-    parser.add_argument("--unit", default="", help="Metric Unit (e.g. bpm, °C)")
+    parser.add_argument("--type", default="GENERIC", help="Asset Type (e.g. ENERGY, MEDICAL)")
+    parser.add_argument("--metric", default="Value", help="Metric Name (e.g. Temp)")
+    parser.add_argument("--unit", default="", help="Metric Unit (e.g. °C)")
     parser.add_argument("--min", type=float, default=60.0)
     parser.add_argument("--max", type=float, default=100.0)
     parser.add_argument("--freq", type=float, default=1.0, help="Publish frequency (seconds)")
-    parser.add_argument("--trend", choices=['stable', 'sine', 'random', 'drift', 'heartbeat'], default='random')
+    parser.add_argument("--trend", choices=['stable', 'sine', 'random', 'normal', 'drift', 'heartbeat'], default='random')
     parser.add_argument("--mqtt-host", default="localhost")
     args = parser.parse_args()
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    client.connect(args.mqtt_host, 1883, 60)
+    connected = False
+    while not connected:
+        try:
+            print(f"[*] {args.id} connecting to MQTT at {args.mqtt_host}...")
+            client.connect(args.mqtt_host, 1883, 60)
+            connected = True
+        except Exception as e:
+            print(f"[-] {args.id} connection failed ({e}). Retrying in 10s...")
+            time.sleep(10)
     client.loop_start()
-
     print(f"[*] DATA MOCK ACTIVE: {args.id} ({args.metric}) -> hive/data/{args.id}/telemetry")
     
     start_time = time.time()
@@ -55,12 +62,14 @@ def main():
                 # T-wave (Ventricular recovery - smooth medium bump)
                 if 1.0 < t < 1.4: val += 4 * math.sin((t-1.0) * math.pi / 0.4)
                 
-                # Small physiological noise for natural look (0.3 instead of 0.1)
+                # Small physiological noise for natural look
                 val += random.uniform(-0.3, 0.3)
             elif args.trend == 'drift':
                 current_val += random.uniform(-1.0, 1.0)
                 val = max(args.min, min(args.max, current_val))
                 current_val = val
+            elif args.trend == 'normal':
+                val = random.gauss((args.min + args.max)/2, (args.max - args.min)/4)
             else: # random
                 val = random.uniform(args.min, args.max)
 

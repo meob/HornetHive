@@ -61,10 +61,13 @@ rough_lon = 0
 
 # Drone tracking
 drones = {}
+activation_time = 0
+activated = False
+alert_msg = ""
 
 # --- MQTT HANDLERS ---
 def on_message(client, userdata, msg):
-    global HOME, pos, drones, detected, detected_by, rough_lat, rough_lon, mayday_last_sent, mission_complete
+    global HOME, pos, drones, detected, detected_by, rough_lat, rough_lon, mayday_last_sent, mission_complete, activation_time, activated, alert_msg
     
     payload_str = msg.payload.decode()
     
@@ -104,30 +107,20 @@ def on_message(client, userdata, msg):
                 "SENSOR": f"ANOMALY DETECTED! Search area identified for {ID}. Investigation required.",
                 "STRIKE": "HOSTILE ACTIVITY! Threat identified in sector. Requesting tactical engagement!"
             }
-            alert_msg = MESSAGES.get(REQUIRED_ACTION, f"ALERT! Objective {ID} active. Need {REQUIRED_ACTION}!")
-
-            log_event(f"TARGET DEPLOYED: {ICON} {ID} at ({round(pos['x'])}, {round(pos['y'])}) - REQ: {REQUIRED_ACTION}")
-
-            # Use the search area center (offset) for the Mayday signal
+            
+            # Use the search area center (offset) for the Mayday signal (Original Logic)
             rough_lat = HOME[0] + (off_y / 111111)
             rough_lon = HOME[1] + (off_x / (111111 * math.cos(math.radians(HOME[0]))))
 
             # --- INITIAL DELAY (Realism) ---
             if DELAY > 0:
                 actual_delay = max(0, random.normalvariate(DELAY, DELAY * 0.2))
-                log_event(f"Activation delay: {round(actual_delay, 2)}s (Target pending...)")
-                time.sleep(actual_delay)
-
-            client.publish("hive/alerts/mayday", json.dumps({
-                "id": ID,
-                "icon": ICON,
-                "msg": alert_msg,
-                "rough_lat": rough_lat,
-                "rough_lon": rough_lon,
-                "radius": AREA_RADIUS,
-                "ts": int(time.time())
-            }), retain=True)
-            mayday_last_sent = time.time()
+                activation_time = time.time() + actual_delay
+                log_event(f"Target PENDING: Activation in {round(actual_delay, 2)}s")
+            else:
+                activation_time = time.time()
+                
+            alert_msg = MESSAGES.get(REQUIRED_ACTION, f"ALERT! Objective {ID} active. Need {REQUIRED_ACTION}!")
             
         except Exception as e:
             print(f"[-] Config Error: {e}")
@@ -243,6 +236,17 @@ try:
         last_t = now
 
         if HOME and not mission_complete:
+            # 0. Activation Logic (Non-blocking delay)
+            if not activated:
+                if now >= activation_time:
+                    activated = True
+                    log_event(f"TARGET DEPLOYED: {ICON} {ID} at ({round(pos['x'])}, {round(pos['y'])}) - REQ: {REQUIRED_ACTION}")
+                    # Force immediate publish in the repetition block
+                    mayday_last_sent = 0 
+                else:
+                    time.sleep(0.5)
+                    continue
+
             # 1. Drift Logic
             if DRIFT_SPEED > 0:
                 pos["x"] += math.cos(drift_angle) * DRIFT_SPEED * dt
@@ -250,17 +254,9 @@ try:
                 # Slowly change drift angle
                 drift_angle += random.uniform(-0.05, 0.05) * dt
 
-            # 2. Mayday Repetition
+            # 2. Mayday Repetition (Original 60s interval)
             if not detected and (now - mayday_last_sent) > 60.0:
-                 # Re-calculate alert_msg for consistency
-                 MESSAGES = {
-                    "RESCUE_TUBE": "MAYDAY! SOS! Vessel in distress. Requesting immediate rescue!",
-                    "MEDKIT": "MEDICAL EMERGENCY! Casualties reported. Need urgent medevac!",
-                    "SENSOR": f"ANOMALY DETECTED! Search area identified for {ID}. Investigation required.",
-                    "STRIKE": "HOSTILE ACTIVITY! Threat identified in sector. Requesting tactical engagement!"
-                 }
-                 alert_msg = MESSAGES.get(REQUIRED_ACTION, f"ALERT! Objective {ID} active. Need {REQUIRED_ACTION}!")
-
+                 log_debug(f"Sending/Repeating MAYDAY for {ID}")
                  client.publish("hive/alerts/mayday", json.dumps({
                     "id": ID,
                     "icon": ICON,

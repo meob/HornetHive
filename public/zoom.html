@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HORNET HIVE | ZOOM VIEW</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root { 
+            --neon: #00ff41; --alert: #ff3131; --warn: #ffcc00; --bg: #050505; --auth: #ff00ff; --cyan: #00aaff;
+        }
+        body { 
+            background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; 
+            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; box-sizing: border-box; overflow: hidden;
+        }
+        #container { 
+            width: 100%; height: 100%; border: 2px solid var(--neon); position: relative; 
+            display: flex; flex-direction: column; overflow: hidden; background: #000;
+        }
+        #osd {
+            position: absolute; top: 10px; left: 10px; right: 10px;
+            display: flex; justify-content: space-between; z-index: 10;
+            text-shadow: 2px 2px 4px #000; pointer-events: none;
+        }
+        #content { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+        #viewfinder-wrapper { position: relative; display: flex; align-items: center; justify-content: center; max-width: 100%; max-height: 100%; }
+        img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #viewfinder { 
+            position: absolute; 
+            border: 2px solid var(--neon); 
+            box-sizing: border-box; 
+            display: none; 
+            pointer-events: none;
+            box-shadow: 0 0 15px var(--neon);
+            z-index: 5;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #viewfinder::after {
+            content: "C4I VIEWPORT";
+            position: absolute;
+            top: -20px;
+            left: 0;
+            font-size: 10px;
+            color: var(--neon);
+            background: rgba(0,0,0,0.7);
+            padding: 2px 5px;
+            white-space: nowrap;
+        }
+        canvas { width: 100%; height: 100%; }
+        .metric-value { font-size: 80px; font-weight: bold; }
+        .metric-unit { font-size: 24px; }
+        .status-bar { position: absolute; bottom: 10px; left: 10px; right: 10px; text-align: center; font-size: 18px; }
+        .wind-compass { width: 200px; height: 200px; border: 2px solid var(--cyan); border-radius: 50%; position: relative; }
+        .wind-arrow { position: absolute; top: 50%; left: 50%; width: 4px; height: 100px; background: var(--cyan); transform-origin: center bottom; transition: transform 0.5s ease-out; }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="osd">
+            <div id="id-tag" style="font-size: 24px; font-weight: bold;">LOADING...</div>
+            <div id="status-tag" style="font-size: 18px;">INITIALIZING</div>
+        </div>
+        <div id="content">
+            <div id="viewfinder-wrapper">
+                <img id="main-img" src="" style="display:none">
+                <div id="viewfinder"></div>
+            </div>
+        </div>
+        <div id="footer" class="status-bar"></div>
+    </div>
+
+<script>
+    const container = document.getElementById('container');
+    container.addEventListener('dblclick', () => {
+        if (!document.fullscreenElement) {
+            container.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetId = urlParams.get('id');
+    const targetType = urlParams.get('type');
+    const socket = io();
+
+    const COLORS = { neon: '#00ff41', alert: '#ff3131', warn: '#ffcc00', auth: '#ff00ff', cyan: '#00aaff' };
+    const dataHistory = [];
+
+    document.getElementById('id-tag').innerText = `${targetType.toUpperCase()}: ${targetId}`;
+
+    socket.on('asset_update', (d) => {
+        if (targetType === 'asset' && d.id === targetId) {
+            renderAsset(d);
+        }
+    });
+
+    socket.on('data_update', (d) => {
+        if (targetType === 'data' && d.id === targetId) {
+            renderData(d);
+        }
+    });
+
+    socket.on('tactical_status', (d) => {
+        if (targetType === 'tactical' && d.sensor === targetId) {
+            renderTactical(d);
+        }
+    });
+
+    socket.on('weather_update', (d) => {
+        const weatherId = d.id || 'SENS';
+        if (targetType === 'weather' && weatherId === targetId) {
+            renderWeather(d);
+        }
+    });
+
+    function renderAsset(d) {
+        const img = document.getElementById('main-img');
+        const footer = document.getElementById('footer');
+        const vf = document.getElementById('viewfinder');
+        
+        img.src = d.video_snapshot;
+        img.style.display = 'block';
+        img.style.transform = `rotate(${d.heading}deg)`;
+        
+        // Show viewfinder and set size (relative to image)
+        // Main UI crops at 160% (180/288 width, 210/336 height)
+        vf.style.display = 'block';
+        vf.style.width = '53.6%'; 
+        vf.style.height = '62.5%';
+        
+        footer.innerHTML = `<span style="color:${d.battery < 20 ? 'var(--alert)' : 'var(--neon)'}">${d.battery.toFixed(1)}% BAT | ${d.altitude}m AGL | ${d.status}</span>`;
+        document.getElementById('status-tag').innerText = d.model;
+    }
+
+    function renderData(d) {
+        document.getElementById('viewfinder').style.display = 'none';
+        document.getElementById('main-img').style.display = 'none';
+        const content = document.getElementById('content');
+        let dataContainer = document.getElementById('data-container');
+        if (!dataContainer) {
+            dataContainer = document.createElement('div');
+            dataContainer.id = 'data-container';
+            dataContainer.style.textAlign = 'center';
+            content.appendChild(dataContainer);
+        }
+        
+        const color = d.status === 'WARNING' ? 'var(--warn)' : (d.status === 'ALERT' ? 'var(--alert)' : 'var(--neon)');
+        
+        dataContainer.innerHTML = `
+            <div style="color:${color}">
+                <div class="metric-value">${d.v}</div>
+                <div class="metric-unit">${d.u}</div>
+                <canvas id="sparkline" style="height: 150px; width: 400px; margin-top: 20px;"></canvas>
+            </div>`;
+        
+        const footer = document.getElementById('footer');
+        footer.innerText = `${d.metric} | ${d.type}`;
+        document.getElementById('status-tag').innerText = d.status;
+        drawSparkline(d.v, color);
+    }
+
+    function renderTactical(d) {
+        const img = document.getElementById('main-img');
+        const vf = document.getElementById('viewfinder');
+        const content = document.getElementById('content');
+
+        if (d.snapshot) {
+            img.src = `data:image/jpeg;base64,${d.snapshot}`;
+            img.style.display = 'block';
+            img.style.transform = 'none';
+            vf.style.display = 'block';
+            vf.style.width = '53.6%'; vf.style.height = '62.5%';
+        } else if (d.sweep !== undefined) {
+            img.style.display = 'none';
+            vf.style.display = 'none';
+            if (!document.getElementById('radar-canvas')) {
+                content.innerHTML += `<canvas id="radar-canvas" width="500" height="500"></canvas>`;
+            }
+            drawRadar(document.getElementById('radar-canvas'), d);
+        }
+        document.getElementById('status-tag').innerText = d.status || 'SCANNING';
+    }
+
+    function renderWeather(d) {
+        document.getElementById('viewfinder').style.display = 'none';
+        document.getElementById('main-img').style.display = 'none';
+        const content = document.getElementById('content');
+        let weatherContainer = document.getElementById('weather-container');
+        if (!weatherContainer) {
+            weatherContainer = document.createElement('div');
+            weatherContainer.id = 'weather-container';
+            weatherContainer.style.display = 'flex';
+            weatherContainer.style.alignItems = 'center';
+            content.appendChild(weatherContainer);
+        }
+        
+        const footer = document.getElementById('footer');
+        weatherContainer.innerHTML = `
+            <div class="wind-compass">
+                <div class="wind-arrow" id="wind-arrow" style="transform: translate(-50%, -100%) rotate(${d.wind_deg}deg)">
+                    <div style="position: absolute; top: 0; left: -8px; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 15px solid var(--cyan);"></div>
+                </div>
+                <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 14px; color: var(--cyan);">N</div>
+            </div>
+            <div style="margin-left: 40px; color: var(--cyan);">
+                <div style="font-size: 48px; font-weight: bold;">${d.wind_speed.toFixed(1)} m/s</div>
+                <div style="font-size: 24px;">DIR: ${Math.round(d.wind_deg)}°</div>
+            </div>`;
+        footer.innerHTML = `<span style="color:var(--cyan)">TEMP: ${d.temp.toFixed(1)}°C | HUM: ${d.humidity.toFixed(1)}%</span>`;
+    }
+
+    function drawSparkline(val, color) {
+        dataHistory.push(val);
+        if (dataHistory.length > 50) dataHistory.shift();
+        const canvas = document.getElementById('sparkline');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width; const h = canvas.height;
+        const minV = Math.min(...dataHistory) * 0.9;
+        const maxV = Math.max(...dataHistory) * 1.1;
+        const range = (maxV - minV) || 1;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        dataHistory.forEach((v, i) => {
+            const x = (i / (dataHistory.length - 1)) * w;
+            const y = h - ((v - minV) / range) * h;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+
+    function drawRadar(canvas, data) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width; const h = canvas.height;
+        const center = { x: w / 2, y: h / 2 };
+        const radius = Math.min(w, h) / 2 - 20;
+        const scale = radius / data.range;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(0, 255, 65, 0.2)';
+        for (let r = 1; r <= 3; r++) {
+            ctx.beginPath(); ctx.arc(center.x, center.y, (radius / 3) * r, 0, Math.PI * 2); ctx.stroke();
+        }
+
+        const sweepRad = (data.sweep * Math.PI) / 180;
+        const grad = ctx.createConicGradient(sweepRad, center.x, center.y);
+        grad.addColorStop(1.0, 'rgba(0, 255, 65, 0.5)');
+        grad.addColorStop(0.7, 'rgba(0, 255, 65, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.moveTo(center.x, center.y);
+        ctx.arc(center.x, center.y, radius, sweepRad, sweepRad - Math.PI, true); ctx.fill();
+
+        ctx.strokeStyle = 'rgba(0, 255, 65, 1)';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(center.x, center.y);
+        ctx.lineTo(center.x + Math.cos(sweepRad) * radius, center.y + Math.sin(sweepRad) * radius);
+        ctx.stroke();
+
+        if (data.blips) {
+            data.blips.forEach(b => {
+                const bRad = (b.angle * Math.PI) / 180;
+                const dist = b.dist * scale;
+                ctx.fillStyle = 'rgba(0, 255, 65, 0.8)';
+                ctx.beginPath(); ctx.arc(center.x + Math.cos(bRad) * dist, center.y + Math.sin(bRad) * dist, 5, 0, Math.PI * 2); ctx.fill();
+            });
+        }
+    }
+</script>
+</body>
+</html>

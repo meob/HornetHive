@@ -258,7 +258,7 @@ try:
                     elif (dist_to_center < 15.0 or is_loitering or is_rtl_descending):
                         if not is_loitering:
                             is_loitering = True
-                            orbit_angle = math.atan2(pos["y"] - target["y"], pos["x"] - target["x"])
+                            orbit_angle = math.atan2(pos["y"] - target["y"], pos["x"] - target["x"]) + math.pi
                             if mission_type in ["STRIKE", "SENSOR", "RESCUE_TUBE", "MEDKIT"]:
                                 perform_action(now)
                         
@@ -295,13 +295,15 @@ try:
                             status = "HOVERING"
 
             # Battery & GPS Update
-            battery -= CONFIG["battery_drain"] * dt
+            battery = max(0, battery - CONFIG["battery_drain"] * dt) # Fix 1: No negative battery
             if battery < 5 and not emergency_lock:
                 emergency_lock = True
                 mission_type, target["z"] = "RTL", 0
                 log_event("CRITICAL BATTERY: Initiating emergency RTL and landing.")
             
-            if dist_to_center < 50 and pos["z"] < 1: 
+            # Fix 2: Recharge ONLY at HOME (0,0)
+            dist_to_home = math.sqrt(pos["x"]**2 + pos["y"]**2)
+            if dist_to_home < 50 and pos["z"] < 1: 
                 if battery < 100:
                     battery = min(100, battery + 5.0 * dt)
 

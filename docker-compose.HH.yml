@@ -18,5 +18,5 @@ services:
 
   target-horse:
     build: { context: ., dockerfile: Dockerfile.python-light }
-    command: ["python", "assets/target_mock.py", "Horse NN", "--type","🐴", "--offset","200,100", "--area","100", "--radius","30", "--delay","8", "--action","SENSOR", "--mqtt-host", "mqtt-broker"]
+    command: ["python", "assets/target_mock.py", "Horse NN", "--type","🐎", "--offset","200,100", "--area","100", "--radius","30", "--delay","8", "--action","SENSOR", "--mqtt-host", "mqtt-broker"]
     depends_on: ["mqtt-broker"]

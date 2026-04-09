@@ -11,7 +11,6 @@ services:
     environment: ["MQTT_HOST=mqtt-broker"]
     depends_on: ["mqtt-broker"]
 
-
   radar-plant:
     build: { context: ., dockerfile: Dockerfile.python-light }
     environment: ["PYTHONUNBUFFERED=1"]
@@ -38,27 +37,27 @@ services:
     command: ["python", "assets/drone_mock.py", "SCOUT_04", "MINI_4", "--mqtt-host", "mqtt-broker"]
     depends_on: ["drone-thermal3"]
 
-  drone-photo1:
+  drone-med1:
     build: { context: ., dockerfile: Dockerfile.python-light }
-    command: ["python", "assets/drone_mock.py", "SCOUT_05", "MAVIC_3_T", "--mqtt-host", "mqtt-broker"]
+    command: ["python", "assets/drone_mock.py", "SCOUT_05", "MATRICE_350_RTK", "--mqtt-host", "mqtt-broker"]
     depends_on: ["drone-thermal4"]
 
-  drone-photo2:
+  drone-med2:
     build: { context: ., dockerfile: Dockerfile.python-light }
-    command: ["python", "assets/drone_mock.py", "SCOUT_06", "MAVIC_3_T", "--mqtt-host", "mqtt-broker"]
-    depends_on: ["drone-photo1"]
+    command: ["python", "assets/drone_mock.py", "SCOUT_06", "MATRICE_350_RTK", "--mqtt-host", "mqtt-broker"]
+    depends_on: ["drone-med1"]
 
   target-leak:
     build: { context: ., dockerfile: Dockerfile.python-light }
-    command: ["python", "assets/target_mock.py", "LEAK on 5", "--type","☢︎", "--action","SENSOR", "--delay","10", "--pos","1110,900", "--area","400", "--drift","0.0", "--mqtt-host","mqtt-broker"]
+    command: ["python", "assets/target_mock.py", "LEAK on 5", "--type","☢︎", "--action","SENSOR", "--delay","10", "--pos","1110,900", "--area","1500", "--drift","0.0", "--mqtt-host","mqtt-broker"]
     depends_on: ["mqtt-broker"] 
 
   target-intruder1:
     build: { context: ., dockerfile: Dockerfile.python-light }
-    command: ["python", "assets/target_mock.py", "INTRUDER1", "--type","🪖", "--action","SENSOR", "--delay","60", "--offset","900,300", "--area","400", "--drift","0.1", "--mqtt-host","mqtt-broker"]
+    command: ["python", "assets/target_mock.py", "INTRUDER", "--type","🪖", "--action","SENSOR", "--delay","60", "--offset","1200,300", "--area","500", "--radius","30", "--drift","1.5", "--mqtt-host","mqtt-broker"]
     depends_on: ["mqtt-broker"]
 
-  target-intruder2:
+  target-worker:
     build: { context: ., dockerfile: Dockerfile.python-light }
-    command: ["python", "assets/target_mock.py", "INTRUDER2", "--type","🪖", "--action","SENSOR", "--delay","120", "--offset","600,200", "--area","400", "--drift","0.1", "--mqtt-host","mqtt-broker"]
+    command: ["python", "assets/target_mock.py", "Worker", "--type","👷‍♀️", "--action","MEDKIT", "--delay","120", "--offset","600,100", "--area","400", "--radius","30", "--drift","0.5", "--mqtt-host","mqtt-broker"]
     depends_on: ["mqtt-broker"]

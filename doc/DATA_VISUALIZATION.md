@@ -5,52 +5,61 @@ Hornet Hive features a dynamic, real-time data visualization system that renders
 ---
 
 ## 🛠️ Data Generation (`data_mock.py`)
+
 To simulate live data without physical sensors, use the `assets/data_mock.py` script.
 
 ### Usage
+
 ```bash
 python assets/data_mock.py [ID] [OPTIONS]
 ```
 
 ### Key Parameters
-- `--type`: Category (e.g., `CARDIAC`, `ENERGY`, `VITAL`).
+
+- `--type`: Category (e.g., `ENERGY, CARDIAC`, `VITAL`).
 - `--metric`: Label (e.g., `HEART_RATE`, `O2_SAT`, `BP_SYS`).
 - `--unit`: Measurement unit (e.g., `bpm`, `%`, `mmHg`, `°C`, `mV`).
 - `--trend`:
   - `stable`: Small random noise around a value.
   - `sine`: Periodic oscillation.
   - `drift`: Random walk within a range.
-  - `heartbeat`: **Synthetic ECG (P-QRS-T complex)**.
+  - `heartbeat`: Synthetic ECG (P-QRS-T complex).
 - `--freq`: Update frequency (seconds). `0.1` is recommended for ECG pulses.
 
 ---
 
 ## 🎨 UI Sparklines (Honeycomb OSD)
+
 The frontend uses the HTML5 **Canvas API** to draw real-time charts over the hexagonal assets.
 
 ### How it works:
-1. **Buffer**: The UI mantiene un buffer (`dataHistory`) degli ultimi 50 punti ricevuti per ogni asset.
-2. **Min-Max Logic**: Calcola automaticamente il `Range (Min-Max)` e lo visualizza in un font discreto sotto il valore principale.
-3. **Responsive Scaling**: Il grafico viene scalato automaticamente per adattarsi all'altezza e larghezza dell'esagono.
+
+1. **Buffer**: The UI maintains a buffer (`dataHistory`) of the last 50 points received for each asset.
+2. **Min-Max Logic**: Automatically calculates the `Range (Min-Max)` and displays it in a discrete font below the main value.
+3. **Responsive Scaling**: The chart is automatically scaled to fit the height and width of the hexagon.
 
 ---
 
 ## 🧪 Simulation Examples
 
 ### 1. Stable Temperature
-```bash
-python assets/data_mock.py P1_TEMP --metric BODY_TEMP --unit °C --min 36.5 --max 37.5 --trend stable
-```
+
+    python assets/data_mock.py P1_TEMP --metric BODY_TEMP --unit °C --min 36.5 --max 37.5 --trend stable
 
 ### 2. High-Frequency ECG (Pulse)
-```bash
-python assets/data_mock.py P1_ECG --metric ECG --trend heartbeat --freq 0.1
-```
+
+    python assets/data_mock.py P1_ECG --metric ECG --trend heartbeat --freq 0.1
 
 ### 3. Oxygen Saturation (SpO2)
-```bash
-python assets/data_mock.py P1_SPO2 --metric O2_SAT --unit % --min 95 --max 99 --trend drift
-```
 
+    python assets/data_mock.py P1_SPO2 --metric O2_SAT --unit % --min 95 --max 99 --trend drift
+
+### 4. CCU (Coronary Care Unit) full example
+
+    docker-compose -f docker-compose.CCU.yml up --build
+
+The result is this:
+<img alt="HORNET HIVE CCU example" src="CCU.webp" width="80%">   
 ---
+
 *Developed for tactical Situational Awareness and medical monitoring research.*

@@ -43,7 +43,7 @@ def fetch_worker(args, api_key):
     # Initial data if no API or while waiting for first fetch
     current_mock = {
         "temp": 22.5, "humidity": 45, "pressure": 1013,
-        "wind_speed": 8.2, "wind_deg": 160,
+        "wind_speed": 8.2, "wind_deg": 134,
         "description": "clear sky", "icon": "01d", "city": args.city
     }
 

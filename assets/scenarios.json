@@ -10,7 +10,7 @@
     "description": "Dismissed nuclear plant. Surveillance required for illegal entry detection."
   },
   "FUKUSHIMA_PLANT": {
-    "lat": 37.420325, "lon": 141.019730, "zoom": 16,
+    "lat": 37.420325, "lon": 141.019730, "zoom": 15,
     "mission_type": "DEFENSE",
     "description": "Disaster Response Zone. High radiation risk. Rotate assets to monitor plant and reactors.",
     "spatial_markers": {
@@ -45,7 +45,7 @@
     "description": "Alpine SAR. High altitude. Search for missing climbers."
   },
   "TORINO_MEDICAL": {
-    "lat": 45.037597, "lon": 7.675664, "zoom": 14,
+    "lat": 45.037597, "lon": 7.675664, "zoom": 16,
     "mission_type": "LOGISTICS",
     "description": "Urban Logistics (Molinette Hospital). Organ/Blood transport corridor.",
     "spatial_markers": {

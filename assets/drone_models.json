@@ -51,7 +51,7 @@
       "stall_speed": 28.0,
       "behavior_type": "STANDARD",
       "origin": "Portugal",
-      "max_speed": 42.0, "climb_rate": 4.0, "battery_drain": 0.009,
+      "max_speed": 32.0, "climb_rate": 4.0, "battery_drain": 0.009,
       "min_alt": 50, "max_alt": 5000, "sensor": "Maritime Radar & SATCOM",
       "capability": "RESCUE_TUBE",
       "description": "Specialized maritime SAR drone capable of dropping life rafts and long-range surveillance."

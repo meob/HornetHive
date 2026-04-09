@@ -1,0 +1,38 @@
+{
+  "CARDIAC": {
+    "HEART_RATE": {
+      "min": 50,
+      "max": 120,
+      "unit": "bpm",
+      "alert_msg": "CRITICAL HEART RATE DETECTED!"
+    }
+  },
+  "VITAL": {
+    "O2_SAT": {
+      "min": 90,
+      "max": 100,
+      "unit": "%",
+      "alert_msg": "CRITICAL SPO2 LEVEL DETECTED!"
+    },
+    "BP_SYS": {
+      "min": 90,
+      "max": 160,
+      "unit": "mmHg",
+      "alert_msg": "CRITICAL BLOOD PRESSURE DETECTED!"
+    },
+    "TEMP": {
+      "min": 35.0,
+      "max": 38.5,
+      "unit": "°C",
+      "alert_msg": "FEVER DETECTED!"
+    }
+  },
+  "ENV": {
+    "TEMP": {
+      "min": 10.0,
+      "max": 35.0,
+      "unit": "°C",
+      "alert_msg": "ENVIRONMENTAL TEMPERATURE ANOMALY!"
+    }
+  }
+}

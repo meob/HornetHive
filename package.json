@@ -1,6 +1,6 @@
 {
   "name": "hornethive",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "** HorneHive ** is a decentralized Command and Control (C2) framework designed for autonomous drone swarm orchestration. It features a futuristic hexagonal \"Common Operational Picture\" (COP) that provides real-time telemetry, synthetic satellite vision, and AI-driven intruder detection.",
   "main": "index.js",
   "scripts": {
