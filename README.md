@@ -9,7 +9,7 @@ It also integrates Artificial Intelligence (AI) across multiple components to de
 
 HORNET HIVE can be used as a simulation game in various tactical scenarios (e.g., SAR – Search and Rescue) or connected to real-world components such as cameras, sensors, and drones.
 
-The drone simulation component is complete in every aspect: flight physics, battery management, satellite view, and controls. Integration with external components such as RTSP cameras, object detection, sensors, and alarms with Telegram is also complete but requires specific customization and configuration. Drone flock management and AI-assisted flight control are a proof of concept (POC) and can be extended in various directions.
+The drone simulation component is complete in every aspect: flight physics, battery management, controls, and drones' camera simulation with satellite views. Integration with external components such as RTSP cameras, object detection, sensors, and alarms with Telegram is also complete but requires specific customization and configuration. Drone flock management and AI-assisted flight control are a proof of concept (POC) and can be extended in various directions.
 
 ---
 
@@ -112,13 +112,14 @@ It is highly recommended to use a virtual environment to manage dependencies:
 npm install
 ```
 
-### 4. 🧠 AI Models (Mandatory)
+### 4. 🧠 AI Models
 
 Large binary files are excluded from this repository. You must download them manually and place them in the project root:
 
 - **YOLOv8n (Object Detection)**: [Download yolov8n.pt](https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.pt)
 - **MediaPipe Hand Landmarker (Gesture Auth)**: [Download hand_landmarker.task](https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task)
 
+YOLO is used by ```camera_bridge.py``` to perform 
 ---
 
 ## 📂 Project Structure

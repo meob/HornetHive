@@ -13,10 +13,13 @@ is also complete but generally requires specific customization and configuration
 - [x] **Data Mock**: Custom data generation.
 - [x] **Alarm System**: Simple rule based alarm system.
 - [x] **UI Reordering (Drag & Drop)**: Allow operators to manually move hexagons to customize the C2 layout.
-- [x] **Honeycomb Zoom**: ~~Add a slider~~ Hexagon zoom on a new browser window.
+- [x] **Honeycomb Zoom**: ~~Add a slider~~ Double-click on an hexagon opens a zoomed-in new browser window.
+- [ ] **Spiral Search**: Add a new button to start a drone spiral search 🌀
 - [ ] **Multi-Waypoint Missions**: Allow users to click multiple points on the map to define a complex flight path.
 - [ ] **Scenario Editor**: A UI tool to add new scenarios (Lat/Lon/Zoom) without editing JSON.
 - [ ] **3D Visualization**: Explore integration with CesiumJS or Mapbox for a 3D tactical view.
+- [ ] **Game score**: Really ???
+- [ ] **Automatic target generation**: Really ???
 
 ## 🔌 Real-world Integration
 - [x] **Camera**: RTSP camera streams integrated.
